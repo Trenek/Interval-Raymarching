@@ -1,0 +1,1 @@
+add_subdirectory(tREngine EXCLUDE_FROM_ALL)

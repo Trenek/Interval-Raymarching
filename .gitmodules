@@ -1,0 +1,3 @@
+[submodule "dependencies/tREngine"]
+	path = dependencies/tREngine
+	url = https://github.com/Trenek/tREngine
