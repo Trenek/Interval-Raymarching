@@ -90,7 +90,7 @@ static void createGraphicPipelines(struct EngineCore *this) {
         .qRenderPassCore = qRenderPass,
         .renderPassCore = renderPass,
         .vertexShader = "shaders/screen.spv",
-        .fragmentShader = "shaders/raymarch.spv",
+        .fragmentShader = "shaders/slangRaymarch.spv",
         .minDepth = 0.0f,
         .maxDepth = 1.0f,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
