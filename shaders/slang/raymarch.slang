@@ -11,27 +11,6 @@ struct UniformBufferObject {
 [[vk::binding(0, 0)]]
 ParameterBlock<UniformBufferObject> ubo;
 
-[Differentiable]
-float3x3 rot3D(float3 axis, float angle) {
-    float s = sin(angle);
-    float c = cos(angle);
-    float oc = 1.0 - c;
-
-    axis = normalize(axis);
-
-    return float3x3(
-        oc * axis.x * axis.x + c,
-        oc * axis.x * axis.y - axis.z * s, 
-        oc * axis.x * axis.z + axis.y * s,
-        oc * axis.y * axis.x + axis.z * s,
-        oc * axis.y * axis.y + c,
-        oc * axis.y * axis.z - axis.x * s,
-        oc * axis.z * axis.x - axis.y * s, 
-        oc * axis.z * axis.y + axis.x * s,
-        oc * axis.z * axis.z + c
-    );
-} 
-
 interface IScene<R : IDifferentiable, T3 : IDifferentiable> {
     [Differentiable]
     static R evaluate(T3 p);
@@ -46,29 +25,17 @@ float3 gradient<T : IScene<float, float3>>(float3 p) {
 }
 
 // #define FORWARD_DIFF
-// #define BACKWARD_DIFF
 
-#ifdef BACKWARD_DIFF
-Interval3 gradient<T : IScene<Interval, Interval3>>(Interval3 p) {
-    DifferentialPair<Interval3> dp = diffPair(p, Interval3(Interval(0.0), Interval(0.0), Interval(0.0)));
-    
-    bwd_diff(T::evaluate)(dp, Interval(1.0, 1.0));
-
-    return dp.d; 
-}
-#else
 #ifdef FORWARD_DIFF
 Interval3 gradient<T : IScene<Interval, Interval3>>(Interval3 p) {
     Interval3 grad;
 
-    DifferentialPair<Interval3> dp_x = diffPair(p, Interval3(Interval(1.0, 1.0), Interval(0.0, 0.0), Interval(0.0, 0.0)));
+    DifferentialPair<Interval3> dp_x = diffPair(p, Interval3(float3(1.0, 0.0, 0.0)));
+    DifferentialPair<Interval3> dp_y = diffPair(p, Interval3(float3(0.0, 1.0, 0.0)));
+    DifferentialPair<Interval3> dp_z = diffPair(p, Interval3(float3(0.0, 0.0, 1.0)));
+
     grad.x = fwd_diff(T::evaluate)(dp_x).d;
-
-    DifferentialPair<Interval3> dp_y = diffPair(p, Interval3(Interval(0.0, 0.0), Interval(1.0, 1.0), Interval(0.0, 0.0)));
     grad.y = fwd_diff(T::evaluate)(dp_y).d;
-
-    // Dla Z: ustawiamy pochodną wejściową na 1.0 dla osi Z
-    DifferentialPair<Interval3> dp_z = diffPair(p, Interval3(Interval(0.0, 0.0), Interval(0.0, 0.0), Interval(1.0, 1.0)));
     grad.z = fwd_diff(T::evaluate)(dp_z).d;
 
     return grad;
@@ -80,19 +47,19 @@ Interval3 gradient<T : IScene<Interval, Interval3>>(Interval3 p) {
 
     Interval3 p_x_plus  = Interval3(p.x + eps, p.y, p.z);
     Interval3 p_x_minus = Interval3(p.x - eps, p.y, p.z);
-    grad.x = (T::evaluate(p_x_plus) - T::evaluate(p_x_minus)) / (eps * 2.0);
 
     Interval3 p_y_plus  = Interval3(p.x, p.y + eps, p.z);
     Interval3 p_y_minus = Interval3(p.x, p.y - eps, p.z);
-    grad.y = (T::evaluate(p_y_plus) - T::evaluate(p_y_minus)) / (eps * 2.0);
 
     Interval3 p_z_plus  = Interval3(p.x, p.y, p.z + eps);
     Interval3 p_z_minus = Interval3(p.x, p.y, p.z - eps);
+
+    grad.x = (T::evaluate(p_x_plus) - T::evaluate(p_x_minus)) / (eps * 2.0);
+    grad.y = (T::evaluate(p_y_plus) - T::evaluate(p_y_minus)) / (eps * 2.0);
     grad.z = (T::evaluate(p_z_plus) - T::evaluate(p_z_minus)) / (eps * 2.0);
 
     return grad;
 }
-#endif
 #endif
 
 namespace V {
@@ -195,7 +162,11 @@ Optional<float> rayMarch<T : IScene<Interval, Interval3>>(float3 ro, float3 rd) 
 Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, Interval t0, Interval f, Interval dF, float epsilon) {
     while (t0.length() > epsilon) {
         float mid = t0.mid();
-        
+
+        // if (abs(dF.minVal) < 0.0001f || abs(dF.maxVal) < 0.0001f) {
+        //     return none;
+        // }
+
         Interval fMid = T::evaluate(ro + rd * Interval(mid));
         Interval t1 = mid - (fMid / dF);
 
@@ -207,14 +178,10 @@ Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, In
         }
         else {
             return none;
-            // return t0.minVal;
         }
 
         f = T::evaluate(ro + rd * t0);
-        Interval3 dF3 = gradient<T>(ro + rd * t0);
-
-        dF = dot(dF3, rd);
-        // dF = dF3.x * rd.x + dF3.y * rd.y + dF3.z * rd.z;
+        dF = dot(gradient<T>(ro + rd * t0), rd);
 
         if (dF.contains(0.0)) {
             return none; 
@@ -224,13 +191,13 @@ Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, In
     if (f.contains(0.0)) {
         return Optional<float>(t0.minVal);
     }
-    
+
     return none;
 }
 
 Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd) {
     Optional<float> result = none;
-    const float maxDistance = 10000.0;
+    const float maxDistance = 100.0;
     const float epsilon = 0.001;
 
     Interval t0 = Interval(0.0, maxDistance);
@@ -244,24 +211,18 @@ Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro, float
         f = T::evaluate(ro + rd * t0);
 
         if (f.contains(0.0)) {
-            if (t0.length() < epsilon) {
-                return t0.minVal;
-            }
-
-            // Interval3 dF3 = gradient<T>(ro + rd * t0);
-            // Interval dF = dF3.x * rd.x + dF3.y * rd.y + dF3.z * rd.z;
             Interval dF = dot(gradient<T>(ro + rd * t0), rd);
 
-            float mid = t0.mid();
+            Optional<float> n = Newton<T>(ro, rd, t0, f, dF, epsilon);
 
-            if (dF.contains(0.0)) {
-                stack.push(Interval(mid, t0.maxVal));
-                stack.push(Interval(t0.minVal, mid));
+            if (n != none) {
+                return n;
             }
             else {
-                Optional<float> n = Newton<T>(ro, rd, t0, f, dF, epsilon);
+                float mid = t0.mid();
 
-                return n;
+                stack.push(Interval(mid, t0.maxVal));
+                stack.push(Interval(t0.minVal, mid));
             }
         }
     }
@@ -319,12 +280,12 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -4.0);
+    const float3 ro = float3(0.0, 0.0, -3.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::DecoCube>(ro, rd, lightDir, color)) {
+    if (tryToDraw<I::Triangle>(ro, rd, lightDir, color)) {
         color *= float3(1.0, 0.0, 0.0);
     }
 

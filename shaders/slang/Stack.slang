@@ -1,6 +1,6 @@
 public struct Stack <T, let N : int> {
     T stack[N];
-    int currentSize;
+    public int currentSize;
 
     public __init() {
         this.currentSize = 0;

@@ -2,7 +2,7 @@ module Intervals3;
 
 import Intervals;
 
-public struct Interval3 : IDifferentiable, IArithmetic {
+public struct Interval3 : IDifferentiable {
     public Interval x;
     public Interval y;
     public Interval z;
@@ -49,22 +49,18 @@ public struct Interval3 : IDifferentiable, IArithmetic {
         this.z = Interval(x.z);
     }
 
-    [Differentiable]
     public float3 mid() {
         return float3(this.x.mid(), this.y.mid(), this.z.mid());
     }
 
-    [Differentiable]
     public bool equals(Interval3 a) {
         return this.x == a.x && this.y == a.y && this.z == a.z;
     }
 
-    [Differentiable]
     public bool lessThan(Interval3 a) {
         return this.x < a.x && this.y < a.y && this.z < a.z;
     }
 
-    [Differentiable]
     public bool lessThanOrEquals(Interval3 a) {
         return this.x <= a.x && this.y <= a.y && this.z <= a.z;
     }
@@ -74,7 +70,12 @@ public struct Interval3 : IDifferentiable, IArithmetic {
         return Interval3(this.x + b.x, this.y + b.y, this.z + b.z);
     }
 
+    static DifferentialPair<Interval3> fwdSub(DifferentialPair<Interval3> dpa, DifferentialPair<Interval3> dpb) {
+        return diffPair(dpa.p.sub(dpb.p), dpa.d.sub(dpb.d));
+    }
+
     [Differentiable]
+    [ForwardDerivative(fwdSub)]
     public Interval3 sub(Interval3 b) {
         return Interval3(this.x - b.x, this.y - b.y, this.z - b.z);
     }
@@ -90,17 +91,32 @@ public struct Interval3 : IDifferentiable, IArithmetic {
     }
 
     [Differentiable]
-    public Interval3 mod(Interval3 b) {
-        return Interval3(this.x % b.x, this.y % b.y, this.z % b.z);
-    }
-
-    [Differentiable]
     public Interval3 neg() {
         return Interval3(this.x.neg(), this.y.neg(), this.z.neg());
     }
+
+    [Differentiable]
+    public Interval3 max(Interval3 b) {
+        return Interval3(max(this.x, b.x), max(this.y, b.y), max(this.z, b.z));
+    }
+
+    [Differentiable]
+    public Interval3 min(Interval3 b) {
+        return Interval3(min(this.x, b.x), min(this.y, b.y), min(this.z, b.z));
+    }
+
+    [Differentiable]
+    public Interval3 abs() {
+        return Interval3(abs(this.x), abs(this.y), abs(this.z));
+    }
+
+    [Differentiable]
+    public Interval dot(Interval3 b) {
+        return this.x * b.x + this.y * b.y + this.z * b.z;
+    }
 }
 
-#define MAKE_OPERATORS(RT, OP_NAME, METHOD) \
+#define MAKE_BINARY_OPERATORS(RT, OP_NAME, METHOD) \
     [Differentiable] public RT OP_NAME(Interval3 a, Interval3 b) { return a.METHOD(b); } \
     [Differentiable] public RT OP_NAME(Interval3 a, float3 b) { return a.METHOD(Interval3(b)); } \
     [Differentiable] public RT OP_NAME(float3 a, Interval3 b) { return Interval3(a).METHOD(b); } \
@@ -111,34 +127,22 @@ public struct Interval3 : IDifferentiable, IArithmetic {
     [Differentiable] public RT OP_NAME(float3 a, Interval b) { return Interval3(a).METHOD(Interval3(b)); } \
     [Differentiable] public RT OP_NAME(Interval a, float3 b) { return Interval3(a).METHOD(Interval3(b)); }
 
-MAKE_OPERATORS(Interval3, operator+, add)
-MAKE_OPERATORS(Interval3, operator-, sub)
-MAKE_OPERATORS(Interval3, operator*, mul)
-MAKE_OPERATORS(Interval3, operator/, div)
-MAKE_OPERATORS(Interval3, operator%, mod)
-MAKE_OPERATORS(bool, operator==, equals);
-MAKE_OPERATORS(bool, operator<, lessThan);
-MAKE_OPERATORS(bool, operator<=, lessThanOrEquals);
+#define MAKE_UNARY_OPERATORS(RT, OP_NAME, METHOD) \
+    [Differentiable] public RT OP_NAME(Interval3 a) { return a.METHOD(); }
 
-[Differentiable]
-public Interval3 operator-(Interval3 a) {
-    return a.neg();
-}
+MAKE_BINARY_OPERATORS(bool, operator==, equals);
+MAKE_BINARY_OPERATORS(bool, operator<, lessThan);
+MAKE_BINARY_OPERATORS(bool, operator<=, lessThanOrEquals);
+MAKE_BINARY_OPERATORS(Interval3, operator+, add)
+MAKE_BINARY_OPERATORS(Interval3, operator-, sub)
+MAKE_BINARY_OPERATORS(Interval3, operator*, mul)
+MAKE_BINARY_OPERATORS(Interval3, operator/, div)
+MAKE_BINARY_OPERATORS(Interval3, max, max)
+MAKE_BINARY_OPERATORS(Interval3, min, min)
+MAKE_BINARY_OPERATORS(Interval, dot, dot)
 
-[Differentiable]
-public Interval3 max(Interval3 a, float b) {
-    return Interval3(max(a.x, b), max(a.y, b), max(a.z, b));
-}
-
-[Differentiable]
-public Interval3 min(Interval3 a, float b) {
-    return Interval3(min(a.x, b), min(a.y, b), min(a.z, b));
-}
-
-[Differentiable]
-public Interval3 abs(Interval3 a) {
-    return Interval3(abs(a.x), abs(a.y), abs(a.z));
-}
+MAKE_UNARY_OPERATORS(Interval3, operator-, neg)
+MAKE_UNARY_OPERATORS(Interval3, abs, abs)
 
 [Differentiable]
 public Interval length(Interval3 n) {
@@ -152,19 +156,7 @@ public Interval norm(Interval3 n) {
 
 [Differentiable]
 public Interval3 normalize(Interval3 v) {
-    Interval n = norm(v);
-
-    return Interval3(v.x / n, v.y / n, v.z / n);
-}
-
-[Differentiable]
-public Interval dot(Interval3 a, Interval3 b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-[Differentiable]
-public Interval dot(const Interval3 a, const float3 b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
+    return v / norm(v);
 }
 
 [Differentiable]

@@ -1,11 +1,39 @@
-struct PlaneScene : IScene<T, T3> {
+[Differentiable]
+float3x3 rot3D(float3 axis, float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    axis = normalize(axis);
+
+    return float3x3(
+        oc * axis.x * axis.x + c,
+        oc * axis.x * axis.y - axis.z * s, 
+        oc * axis.x * axis.z + axis.y * s,
+        oc * axis.y * axis.x + axis.z * s,
+        oc * axis.y * axis.y + c,
+        oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s, 
+        oc * axis.z * axis.y + axis.x * s,
+        oc * axis.z * axis.z + c
+    );
+} 
+
+struct Triangle : IScene<T, T3> {
+    [Differentiable]
+    static T signedDstToCircle(T3 p, float3 center, float r) {
+        return abs(p.x) + abs(p.y) + abs(p.z) - r;
+    }
+
     [Differentiable]
     static T evaluate(T3 p) {
-        return p.y;
+        float3x3 rot = rot3D(float3(3.0, 2.0, 1.0), ubo.iTime);
+
+        return signedDstToCircle(mul(rot, p), float3(0.0, 0.0, 0.0), 0.5);
     }
 }
 
-struct CircleScene : IScene<T, T3> {
+struct Sphere : IScene<T, T3> {
     [Differentiable]
     static T signedDstToCircle(T3 p, float3 center, float r) {
         return length(center - p) - r;
@@ -13,24 +41,11 @@ struct CircleScene : IScene<T, T3> {
 
     [Differentiable]
     static T evaluate(T3 p) {
-        return signedDstToCircle(p, float3(sin(ubo.iTime) * 1.5, 0.0, 0.0), 0.5);
+        return signedDstToCircle(p, float3(sin(ubo.iTime), 0.0, 0.0), 0.5);
     }
 }
 
-struct TriangleScene : IScene<T, T3> {
-    [Differentiable]
-    static T signedDstToCircle(T3 p, float3 center, float r) {
-        T3 x = center - p;
-        return (x.x + x.y + x.z) - r;
-    }
-
-    [Differentiable]
-    static T evaluate(T3 p) {
-        return signedDstToCircle(p, float3(sin(ubo.iTime) * 1.5, 0.0, 0.0), 0.5);
-    }
-}
-
-struct BoxScene : IScene<T, T3> {
+struct Cube : IScene<T, T3> {
     [Differentiable]
     static T maxVal(T3 v) {
         return max(max(v.x, v.y), v.z);
@@ -63,11 +78,11 @@ struct FullScene : IScene<T, T3> {
 
     [Differentiable]
     static T evaluate(T3 p) {
-        return smin(CircleScene::evaluate(p), BoxScene::evaluate(p), 1.0);
+        return smin(Sphere::evaluate(p), Cube::evaluate(p), 1.0);
     }
 };
 
-struct HeartScene : IScene<T, T3> {
+struct Heart : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
         float3x3 rot1 = rot3D(float3(1.0, 0.0, 0.0), 3.14 * 3 / 2);
