@@ -46,6 +46,10 @@ public struct Interval : IDifferentiable {
         return Interval(max(this.minVal, a.minVal), min(this.maxVal, a.maxVal));
     }
 
+    public Interval sum(Interval a) {
+        return Interval(min(this.minVal, a.minVal), max(this.maxVal, a.maxVal));
+    }
+
     public float mid() {
         return (this.maxVal + this.minVal) * 0.5;
     }
@@ -158,7 +162,11 @@ public struct Interval : IDifferentiable {
     }
 
     static DifferentialPair<Interval> fwdMax(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
-        return diffPair(max(dpa.p, dpb.p), max(dpa.d, dpb.d));
+        Interval der = (dpa.p.minVal > dpb.p.maxVal) ? dpa.d :
+                       (dpb.p.minVal > dpa.p.maxVal) ? dpb.d :
+                                                       dpa.d.sum(dpb.d); 
+
+        return diffPair(max(dpa.p, dpb.p), der);
     }
 
     [Differentiable]
@@ -168,7 +176,11 @@ public struct Interval : IDifferentiable {
     }
 
     static DifferentialPair<Interval> fwdMin(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
-        return diffPair(min(dpa.p, dpb.p), min(dpa.d, dpb.d));
+        Interval der = (dpa.p.minVal > dpb.p.maxVal) ? dpb.d :
+                       (dpb.p.minVal > dpa.p.maxVal) ? dpa.d :
+                                                       dpa.d.sum(dpb.d); 
+
+        return diffPair(min(dpa.p, dpb.p), der);
     }
 
     [Differentiable]

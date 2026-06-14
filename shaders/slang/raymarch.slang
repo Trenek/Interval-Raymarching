@@ -17,14 +17,20 @@ interface IScene<R : IDifferentiable, T3 : IDifferentiable> {
 }
 
 float3 gradient<T : IScene<float, float3>>(float3 p) {
-    DifferentialPair<float3> dp = diffPair(p, float3(0.0));
+    float3 grad;
 
-    bwd_diff(T::evaluate)(dp, 1.0);
+    DifferentialPair<float3> dp_x = diffPair(p, float3(1.0, 0.0, 0.0));
+    DifferentialPair<float3> dp_y = diffPair(p, float3(0.0, 1.0, 0.0));
+    DifferentialPair<float3> dp_z = diffPair(p, float3(0.0, 0.0, 1.0));
 
-    return dp.d;
+    grad.x = fwd_diff(T::evaluate)(dp_x).d;
+    grad.y = fwd_diff(T::evaluate)(dp_y).d;
+    grad.z = fwd_diff(T::evaluate)(dp_z).d;
+
+    return grad;
 }
 
-// #define FORWARD_DIFF
+#define FORWARD_DIFF
 
 #ifdef FORWARD_DIFF
 Interval3 gradient<T : IScene<Interval, Interval3>>(Interval3 p) {
@@ -104,12 +110,12 @@ Optional<float> rayMarch<T : IScene<float, float3>>(float3 ro, float3 rd) {
 }
 
 Optional<float> rayMarchStep<T : IScene<float, float3>>(float3 ro, float3 rd) {
-    const float maxDistance = 10000.0;
+    const float maxDistance = 1000.0;
     Optional<float> result = none;
     float t = 0.0;
     float prevVal = 1.0;
     float val = 1.0;
-    float step = 0.1;
+    float step = 0.01;
     
     for (int i = 0; val * prevVal > 0 && i < 20000; i += 1) {
         t += step;
@@ -128,8 +134,8 @@ Optional<float> rayMarchStep<T : IScene<float, float3>>(float3 ro, float3 rd) {
 Optional<float> rayMarch<T : IScene<Interval, Interval3>>(float3 ro, float3 rd) {
     Optional<float> result = none;
 
-    const float maxDistance = 10000.0;
-    const float epsilon = 0.001;
+    const float maxDistance = 100.0;
+    const float epsilon = 0.000001;
 
     Interval t = Interval(0.0, maxDistance);
     Interval f;
@@ -163,10 +169,6 @@ Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, In
     while (t0.length() > epsilon) {
         float mid = t0.mid();
 
-        // if (abs(dF.minVal) < 0.0001f || abs(dF.maxVal) < 0.0001f) {
-        //     return none;
-        // }
-
         Interval fMid = T::evaluate(ro + rd * Interval(mid));
         Interval t1 = mid - (fMid / dF);
 
@@ -198,7 +200,7 @@ Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, In
 Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd) {
     Optional<float> result = none;
     const float maxDistance = 100.0;
-    const float epsilon = 0.001;
+    const float epsilon = 0.000001;
 
     Interval t0 = Interval(0.0, maxDistance);
     Interval f;
@@ -253,7 +255,7 @@ float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance,
 bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarch<T>(ro, rd))) {
+    if (none != (distance = rayMarchStep<T>(ro, rd))) {
         color = getColor<T>(ro, rd, distance.value, lightDir);
     }
 
@@ -280,12 +282,12 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -3.0);
+    const float3 ro = float3(0.0, 0.0, -14.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::Triangle>(ro, rd, lightDir, color)) {
+    if (tryToDraw<I::Sphere>(ro, rd, lightDir, color)) {
         color *= float3(1.0, 0.0, 0.0);
     }
 

@@ -95,9 +95,9 @@ struct Heart : IScene<T, T3> {
         T z = p.z;
 
         return
-            pow(pow(x, 2) + 9 / 4 * pow(y, 2) + pow(z, 2) - 1, 3) -
+            pow(pow(x, 2) + (9.0 / 4.0) * pow(y, 2) + pow(z, 2) - 1, 3) -
             pow(x, 2) * pow(z, 3) -
-            9.0 / 80.0 * pow(y, 2) * pow(z, 3);
+            (9.0 / 80.0) * pow(y, 2) * pow(z, 3);
     }
 };
 
