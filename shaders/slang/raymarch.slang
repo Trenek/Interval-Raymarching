@@ -92,13 +92,12 @@ bool between(float a, float minVal, float maxVal) {
     return a >= minVal && a <= maxVal;
 }
 
-Optional<float> rayMarch<T : IScene<float, float3>>(float3 ro, float3 rd) {
-    const float maxDistance = 10000.0;
+Optional<float> rayMarch<T : IScene<float, float3>>(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
     Optional<float> result = none;
     float t = 0.0;
     float distanceTraveled = 1.0;
     
-    for (int i = 0; between(distanceTraveled, 0.001, maxDistance) && i < 80; i += 1) {
+    for (int i = 0; between(distanceTraveled, epsilon, maxDistance) && i < 80; i += 1) {
         t += distanceTraveled = T::evaluate(ro + rd * t);
     }
 
@@ -109,8 +108,7 @@ Optional<float> rayMarch<T : IScene<float, float3>>(float3 ro, float3 rd) {
     return result;
 }
 
-Optional<float> rayMarchStep<T : IScene<float, float3>>(float3 ro, float3 rd) {
-    const float maxDistance = 1000.0;
+Optional<float> rayMarchStep<T : IScene<float, float3>>(float3 ro, float3 rd, const float, const float maxDistance) {
     Optional<float> result = none;
     float t = 0.0;
     float prevVal = 1.0;
@@ -131,11 +129,8 @@ Optional<float> rayMarchStep<T : IScene<float, float3>>(float3 ro, float3 rd) {
     return result;
 }
 
-Optional<float> rayMarch<T : IScene<Interval, Interval3>>(float3 ro, float3 rd) {
+Optional<float> rayMarch<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
     Optional<float> result = none;
-
-    const float maxDistance = 100.0;
-    const float epsilon = 0.000001;
 
     Interval t = Interval(0.0, maxDistance);
     Interval f;
@@ -197,10 +192,8 @@ Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, In
     return none;
 }
 
-Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd) {
+Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
     Optional<float> result = none;
-    const float maxDistance = 100.0;
-    const float epsilon = 0.000001;
 
     Interval t0 = Interval(0.0, maxDistance);
     Interval f;
@@ -252,20 +245,20 @@ float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance,
     return 0.15 + clamp(dot(normal, lightDirection), 0.0, 1.0);
 }
 
-bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color) {
+bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchStep<T>(ro, rd))) {
+    if (none != (distance = rayMarchStep<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir);
     }
 
     return none != distance;
 }
 
-bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color) {
+bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarch<T>(ro, rd))) {
+    if (none != (distance = rayMarch<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir);
     }
 
@@ -287,8 +280,8 @@ float4 fragMain(FragmentInput input) : SV_Target {
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::Heart>(ro, rd, lightDir, color)) {
-        color *= float3(0.5, 0.0, 0.5);
+    if (tryToDraw<I::Heart>(ro, rd, lightDir, color, 1e-6, 100)) {
+        color *= float3(0.0, 1.0, 1.0);
     }
 
     return float4(color, 1.0);
