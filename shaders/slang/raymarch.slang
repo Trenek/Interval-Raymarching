@@ -265,7 +265,7 @@ bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir,
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchNewton<T>(ro, rd))) {
+    if (none != (distance = rayMarch<T>(ro, rd))) {
         color = getColor<T>(ro, rd, distance.value, lightDir);
     }
 
@@ -282,13 +282,13 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -14.0);
+    const float3 ro = float3(0.0, 0.0, -3.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::Sphere>(ro, rd, lightDir, color)) {
-        color *= float3(1.0, 0.0, 0.0);
+    if (tryToDraw<I::Heart>(ro, rd, lightDir, color)) {
+        color *= float3(0.5, 0.0, 0.5);
     }
 
     return float4(color, 1.0);
