@@ -195,6 +195,56 @@ Optional<float> rayMarchInt<T : IScene<Interval, Interval3>>(float3 ro, float3 r
     return result;
 }
 
+Optional<float> rayMarchFloat<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
+    Optional<float> result = none;
+
+    int dlast = round(log2(maxDistance / epsilon));
+    int d = 0;
+
+    float2 t = float2(0.0f, maxDistance);
+    float tincr = maxDistance * 0.5f;
+
+    Interval t0 = Interval(t);
+    Interval f = T::evaluate(ro + rd * t0);
+
+    if (f.contains(0.0f)) while (true) {
+        t.y = t.x + tincr;
+
+        t0 = Interval(t);
+        f = T::evaluate(ro + rd * t0);
+
+        if (f.contains(0.0f)) {
+            if (d == dlast) {
+                return t.x;
+            }
+
+            d++;
+            tincr *= 0.5f;
+        }
+        else {
+            t.x = t.y;
+
+            float fp = frac(0.5f * t.x / tincr);
+
+            if (fp < 1e-8) {
+                for (int j = 0; j <= dlast; j += 1) {
+                    tincr *= 2;
+                    d--;
+                    fp = frac(0.5 * t.x / tincr);
+                    if (d == -1 || fp > 1e-8) break;
+                }
+
+                if (d == -1) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+
 Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, Interval t0, Interval f, Interval dF, float epsilon) {
     while (t0.length() > epsilon) {
         float mid = t0.mid();
@@ -299,7 +349,7 @@ float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float dis
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = rayMarchFloat<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -321,7 +371,7 @@ float4 fragMain(FragmentInput input) : SV_Target {
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::Steiner>(ro, rd, lightDir, color, 1e-9, 10)) {
+    if (tryToDraw<I::Steiner>(ro, rd, lightDir, color, exp2(-12.0), 10)) {
         color *= float3(0.0, 1.0, 1.0);
     }
 
