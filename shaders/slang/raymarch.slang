@@ -143,7 +143,7 @@ Optional<float> rayMarch<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, 
         f = T::evaluate(ro + rd * t);
 
         if (f.contains(0.0)) {
-            if (t.maxVal - t.minVal < epsilon) {
+            if (t.length() < epsilon) {
                 return t.maxVal;
             }
             float mid = t.mid();
@@ -229,16 +229,6 @@ float3 getNormal<T : IScene<float, float3>>(float3 p) {
     return normalize(gradient<T>(p));
 }
 
-Interval3 getNormal<T : IScene<Interval, Interval3>>(Interval3 p) {
-    return normalize(gradient<T>(p));
-}
-
-float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float distance, float3 lightDirection) {
-    Interval3 normal = getNormal<T>(ro + rd * Interval(distance));
-
-    return 0.15 + clamp(dot(normal.mid(), lightDirection), 0.0, 1.0);
-}
-
 float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance, float3 lightDirection) {
     float3 normal = getNormal<T>(ro + rd * distance);
 
@@ -255,11 +245,27 @@ bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir,
     return none != distance;
 }
 
+Interval3 getNormal<T : IScene<Interval, Interval3>>(Interval3 p) {
+    return normalize(gradient<T>(p));
+}
+
+float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float distance, float3 lightDirection, float epsilon, float maxDistance) {
+    float3 normal = getNormal<T>(ro + rd * Interval(distance)).mid();
+
+    float3 hitPoint = ro + rd * distance;
+    float3 shadowRo = hitPoint + lightDirection;
+    
+    Optional<float> shadowHit = rayMarch<T>(shadowRo, lightDirection, epsilon, maxDistance);
+    float shadowFactor = (none == shadowHit) ? 1.0 : 0.0;
+
+    return 0.15 + 0.85 * shadowFactor * clamp(dot(normal, lightDirection), 0.0, 1.0);
+}
+
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
     if (none != (distance = rayMarch<T>(ro, rd, epsilon, maxDistance))) {
-        color = getColor<T>(ro, rd, distance.value, lightDir);
+        color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
     return none != distance;
@@ -275,12 +281,12 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -3.0);
+    const float3 ro = float3(0.0, 0.0, -9.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::Heart>(ro, rd, lightDir, color, 1e-6, 100)) {
+    if (tryToDraw<I::TangleCube>(ro, rd, lightDir, color, 1e-5, 100)) {
         color *= float3(0.0, 1.0, 1.0);
     }
 

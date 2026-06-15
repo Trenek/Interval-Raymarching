@@ -1,73 +1,76 @@
 module Intervals;
 
 public struct Interval : IDifferentiable {
-    public float minVal;
-    public float maxVal;
+    public float2 i;
 
     public typealias This = Interval;
 
+    public property float minVal { get { return this.i.x; } }
+    public property float maxVal { get { return this.i.y; } }
+
     [Differentiable]
     public __init(int val) {
-        this.minVal = val;
-        this.maxVal = val;
+        this.i = float2(val, val);
     }
 
     [Differentiable]
     public __init(Interval val) {
-        this.minVal = val.minVal;
-        this.maxVal = val.maxVal;
+        this.i = val.i;
     }
 
     [Differentiable]
     public __init(float min, float max) {
-        this.minVal = min;
-        this.maxVal = max;
+        this.i = float2(min, max);
     }
 
     [Differentiable]
     public __init(float val) {
-        this.minVal = val;
-        this.maxVal = val;
+        this.i = float2(val, val);
+    }
+
+    [Differentiable]
+    public __init(float2 i) {
+        this.i = i;
     }
 
     public bool contains(float a) {
-        return this.minVal <= a && this.maxVal >= a;
+        return this.i.x <= a && this.i.y >= a;
     }
 
     public bool contains(Interval a) {
-        return this.minVal <= a.minVal && a.maxVal <= this.maxVal;
+        return this.i.x <= a.i.x && a.i.y <= this.i.y;
     }
 
     public bool intersects(Interval a) {
-        return this.minVal <= a.maxVal && a.minVal <= this.maxVal;
+        return this.i.x <= a.i.y && a.i.x <= this.i.y;
     }
 
     public Interval intersection(Interval a) {
-        return Interval(max(this.minVal, a.minVal), min(this.maxVal, a.maxVal));
+        return Interval(max(this.i.x, a.i.x), min(this.i.y, a.i.y));
     }
 
     public Interval sum(Interval a) {
-        return Interval(min(this.minVal, a.minVal), max(this.maxVal, a.maxVal));
+        return Interval(min(this.i.x, a.i.x), max(this.i.y, a.i.y));
     }
 
     public float mid() {
-        return (this.maxVal + this.minVal) * 0.5;
+        return (this.i.y + this.i.x) * 0.5;
     }
 
     public float length() {
-        return this.maxVal - this.minVal;
+        return this.i.y - this.i.x;
     }
 
     public bool equals(Interval a) {
-        return this.minVal == a.minVal && this.maxVal == a.maxVal;
+        return all(this.i == a.i);
     }
 
     public bool lessThan(Interval a) {
-        return this.maxVal < a.minVal;
+        return this.i.y < a.i.x;
     }
 
     public bool lessThanOrEquals(Interval a) {
-        return this.maxVal <= a.maxVal;
+        return this.i.y <= a.i.y;
     }
 
     static DifferentialPair<Interval> fwdAdd(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
@@ -78,7 +81,7 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdAdd)]
     // (a + b)' = a' + b'
     Interval add(Interval b) {
-        return Interval(this.minVal + b.minVal, this.maxVal + b.maxVal);
+        return Interval(this.i + b.i);
     }
 
     static DifferentialPair<Interval> fwdSub(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
@@ -89,7 +92,7 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdSub)]
     // (a - b)' = a' - b'
     Interval sub(Interval b) {
-        return Interval(this.minVal - b.maxVal, this.maxVal - b.minVal);
+        return Interval(this.i.xy - b.i.yx);
     }
 
     static DifferentialPair<Interval> fwdMul(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
@@ -103,26 +106,23 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdMul)]
     // (a * b)' = a' * b + a * b'
     Interval mul(Interval b) {
-        float a0 = this.minVal * b.minVal;
-        float a1 = this.minVal * b.maxVal;
-        float a2 = this.maxVal * b.minVal;
-        float a3 = this.maxVal * b.maxVal;
+        float4 r = this.i.xxyy * b.i.xyxy;
 
-        float minVal = min(min(a0, a1), min(a2, a3));
-        float maxVal = max(max(a0, a1), max(a2, a3));
-
-        return Interval(minVal, maxVal);
+        return Interval(
+            min(min(min(r.x, r.y), r.z), r.w),
+            max(max(max(r.x, r.y), r.z), r.w)
+        );
     }
 
     [Differentiable]
     // (a / b)' = (a' * b - a * b') / b^2
     Interval div(Interval b) {
-        return mul(Interval(1 / b.maxVal, 1 / b.minVal));
+        return mul(Interval(1 / b.i.yx));
     }
 
     [Differentiable]
     public Interval neg() {
-        return Interval(-this.maxVal, -this.minVal);
+        return Interval(-this.i.yx);
     }
 
     static DifferentialPair<Interval> fwdSqrt(DifferentialPair<Interval> dpa) {
@@ -136,7 +136,7 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdSqrt)]
     // (a ^ 0.5)' = a' / (a ^ 0.5) / 2
     Interval sqrt() {
-        return Interval(sqrt(this.minVal), sqrt(this.maxVal));
+        return Interval(sqrt(this.i.xy));
     }
 
     static DifferentialPair<Interval> fwdAbs(DifferentialPair<Interval> dpa) {
@@ -150,21 +150,20 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdAbs)]
     // (|x|)'
     Interval abs() {
-        float absMin = abs(this.minVal);
-        float absMax = abs(this.maxVal);
+        float2 absI = abs(this.i);
 
         float actualMin = 0.0;
         if (false == this.contains(0.0)) {
-            actualMin = min(absMin, absMax);
+            actualMin = min(absI.x, absI.y);
         }
 
-        return Interval(actualMin, max(absMin, absMax));
+        return Interval(actualMin, max(absI.x, absI.y));
     }
 
     static DifferentialPair<Interval> fwdMax(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
-        Interval der = (dpa.p.minVal > dpb.p.maxVal) ? dpa.d :
-                       (dpb.p.minVal > dpa.p.maxVal) ? dpb.d :
-                                                       dpa.d.sum(dpb.d); 
+        Interval der = (dpa.p.i.x > dpb.p.i.y) ? dpa.d :
+                       (dpb.p.i.x > dpa.p.i.y) ? dpb.d :
+                                                 dpa.d.sum(dpb.d); 
 
         return diffPair(max(dpa.p, dpb.p), der);
     }
@@ -172,13 +171,13 @@ public struct Interval : IDifferentiable {
     [Differentiable]
     [ForwardDerivative(fwdMax)]
     Interval max(Interval a) {
-        return Interval(max(this.minVal, a.minVal), max(this.maxVal, a.maxVal));
+        return Interval(max(this.i, a.i));
     }
 
     static DifferentialPair<Interval> fwdMin(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {
-        Interval der = (dpa.p.minVal > dpb.p.maxVal) ? dpb.d :
-                       (dpb.p.minVal > dpa.p.maxVal) ? dpa.d :
-                                                       dpa.d.sum(dpb.d); 
+        Interval der = (dpa.p.i.x > dpb.p.i.y) ? dpb.d :
+                       (dpb.p.i.x > dpa.p.i.y) ? dpa.d :
+                                                 dpa.d.sum(dpb.d); 
 
         return diffPair(min(dpa.p, dpb.p), der);
     }
@@ -186,7 +185,7 @@ public struct Interval : IDifferentiable {
     [Differentiable]
     [ForwardDerivative(fwdMin)]
     public Interval min(Interval b) {
-        return Interval(min(this.minVal, b.minVal), min(this.maxVal, b.maxVal));
+        return Interval(min(this.i, b.i));
     }
 
     static DifferentialPair<Interval> fwdPow(DifferentialPair<Interval> dpa, int dpb) {
@@ -200,14 +199,13 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdPow)]
     // (a ^ 2) = 2 * a^1 * a'
     public Interval pow(int b) {
-        float minB = pow(this.minVal, b);
-        float maxB = pow(this.maxVal, b);
+        float2 powI = pow(this.i, b);
 
         return (b % 2 != 0) ? 
-            Interval(minB, maxB) :
+            Interval(powI) :
             Interval(
-                this.contains(0.0) ? 0.0 : min(minB, maxB),
-                max(minB, maxB)
+                this.contains(0.0) ? 0.0 : min(powI.x, powI.y),
+                max(powI.x, powI.y)
             );
     }
 }
