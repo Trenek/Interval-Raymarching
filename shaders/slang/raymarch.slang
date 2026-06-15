@@ -185,8 +185,8 @@ Optional<float> rayMarchInt<T : IScene<Interval, Interval3>>(float3 ro, float3 r
         else {
             uint shift = firstbitlow(h & (-h));
 
-            l = l >> shift;
-            h = h >> shift;
+            l >>= shift;
+            h >>= shift;
 
             h += 1;
         }
@@ -310,6 +310,53 @@ Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro, float
     return result;
 }
 
+Optional<float> rayMarchNewtonInt<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
+    Optional<float> result = none;
+
+    Interval t0;
+    Interval f;
+
+    uint32_t eps = uint32_t(floor(log2(10.0 / epsilon)));
+    uint32_t h = 1;
+    uint32_t l = 1;
+
+    while (h <= l) {
+        t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));
+        f = T::evaluate(ro + rd * t0);
+
+        if (f.contains(0.0)) {
+            Interval dF = dot(gradient<T>(ro + rd * t0), rd);
+
+            Optional<float> n = none;
+            
+            if (!dF.contains(0.0)) {
+                n = Newton<T>(ro, rd, t0, f, dF, epsilon);
+            }
+
+            if (n != none) {
+                return n;
+            }
+
+            if (firstbithigh(l) >= eps) {
+                return t0.minVal;
+            }
+
+            h = 1 + 2 * (h - 1);
+            l *= 2;
+        }
+        else {
+            uint shift = firstbitlow(h & (-h));
+
+            l >>= shift;
+            h >>= shift;
+
+            h += 1;
+        }
+    }
+
+    return result;
+}
+
 float3 getNormal<T : IScene<float, float3>>(float3 p) {
     return normalize(gradient<T>(p));
 }
@@ -336,7 +383,7 @@ Interval3 getNormal<T : IScene<Interval, Interval3>>(Interval3 p) {
 
 float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float distance, float3 lightDirection, float epsilon, float maxDistance) {
     float3 normal = getNormal<T>(ro + rd * Interval(distance)).mid();
-    //
+
     // float3 hitPoint = ro + rd * distance;
     // float3 shadowRo = hitPoint + lightDirection;
     //
@@ -349,7 +396,7 @@ float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float dis
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = rayMarchNewtonInt<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
