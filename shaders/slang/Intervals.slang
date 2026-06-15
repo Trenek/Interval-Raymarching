@@ -3,8 +3,6 @@ module Intervals;
 public struct Interval : IDifferentiable {
     public float2 i;
 
-    public typealias This = Interval;
-
     public property float minVal { get { return this.i.x; } }
     public property float maxVal { get { return this.i.y; } }
 
@@ -199,13 +197,14 @@ public struct Interval : IDifferentiable {
     [ForwardDerivative(fwdPow)]
     // (a ^ 2) = 2 * a^1 * a'
     public Interval pow(int b) {
-        float2 powI = pow(this.i, b);
+        float minB = pow(this.i.x, b);
+        float maxB = pow(this.i.y, b);
 
         return (b % 2 != 0) ? 
-            Interval(powI) :
+            Interval(minB, maxB) :
             Interval(
-                this.contains(0.0) ? 0.0 : min(powI.x, powI.y),
-                max(powI.x, powI.y)
+                this.contains(0.0) ? 0.0 : min(minB, maxB),
+                max(minB, maxB)
             );
     }
 }
@@ -235,3 +234,4 @@ MAKE_UNARY_OPERATOR(sqrt, sqrt)
 MAKE_UNARY_OPERATOR(abs, abs)
 
 MAKE_UNARY_OPERATOR_POW(pow, pow)
+
