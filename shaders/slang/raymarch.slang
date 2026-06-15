@@ -160,6 +160,41 @@ Optional<float> rayMarch<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, 
     return result;
 }
 
+Optional<float> rayMarchInt<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
+    Optional<float> result = none;
+
+    Interval t0;
+    Interval f;
+
+    uint64_t eps = floor(log2(10.0 / epsilon));
+    uint64_t h = 1;
+    uint64_t l = 1;
+
+    while (h <= l) {
+        t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));
+        f = T::evaluate(ro + rd * t0);
+
+        if (f.contains(0.0)) {
+            if (firstbithigh(l) >= eps) {
+                return t0.minVal;
+            }
+
+            h = 1 + 2 * (h - 1);
+            l *= 2;
+        }
+        else {
+            uint przesuniecie = firstbitlow(h & (-h));
+
+            l = l >> przesuniecie;
+            h = h >> przesuniecie;
+
+            h += 1;
+        }
+    }
+
+    return result;
+}
+
 Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, Interval t0, Interval f, Interval dF, float epsilon) {
     while (t0.length() > epsilon) {
         float mid = t0.mid();
@@ -251,20 +286,20 @@ Interval3 getNormal<T : IScene<Interval, Interval3>>(Interval3 p) {
 
 float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float distance, float3 lightDirection, float epsilon, float maxDistance) {
     float3 normal = getNormal<T>(ro + rd * Interval(distance)).mid();
+    //
+    // float3 hitPoint = ro + rd * distance;
+    // float3 shadowRo = hitPoint + lightDirection;
+    //
+    // Optional<float> shadowHit = rayMarch<T>(shadowRo, lightDirection, epsilon, maxDistance);
+    // float shadowFactor = (none == shadowHit) ? 1.0 : 0.0;
 
-    float3 hitPoint = ro + rd * distance;
-    float3 shadowRo = hitPoint + lightDirection;
-    
-    Optional<float> shadowHit = rayMarch<T>(shadowRo, lightDirection, epsilon, maxDistance);
-    float shadowFactor = (none == shadowHit) ? 1.0 : 0.0;
-
-    return 0.15 + 0.85 * shadowFactor * clamp(dot(normal, lightDirection), 0.0, 1.0);
+    return 0.15 + clamp(dot(normal, lightDirection), 0.0, 1.0);
 }
 
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarch<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -281,12 +316,12 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -9.0);
+    const float3 ro = float3(0.0, 0.0, -3.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1);
 
-    if (tryToDraw<I::TangleCube>(ro, rd, lightDir, color, 1e-5, 100)) {
+    if (tryToDraw<I::Steiner>(ro, rd, lightDir, color, 1e-9, 10)) {
         color *= float3(0.0, 1.0, 1.0);
     }
 

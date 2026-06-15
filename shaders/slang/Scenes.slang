@@ -247,12 +247,10 @@ struct BarthDecic : IScene<T, T3> {
         T y4 = pow(y, 4);
         T z4 = pow(z, 4);
 
-        // --- CZĘŚĆ 1 RÓWNANIA ---
         T p1 = (x2 - tau4 * y2) * (y2 - tau4 * z2) * (z2 - tau4 * x2);
         T p2 = x4 + y4 + z4 - 2.0 * x2 * y2 - 2.0 * x2 * z2 - 2.0 * y2 * z2;
         T term1 = 8.0 * p1 * p2;
 
-        // --- CZĘŚĆ 2 RÓWNANIA ---
         T sumSq = x2 + y2 + z2;
         T b1 = sumSq - w2;
         T b2 = sumSq - (2.0 - tau) * w2;
@@ -260,8 +258,6 @@ struct BarthDecic : IScene<T, T3> {
 
         T rawBarthDecic = term1 + term2;
 
-        T boundingSphere = length(p) - 2.0;
-
-        return max(rawBarthDecic, boundingSphere);
+        return rawBarthDecic;
     }
 };
