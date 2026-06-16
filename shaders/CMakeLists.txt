@@ -21,10 +21,12 @@ macro(compile_shader2 SRC_FILE DST_FILE)
         OUTPUT "${SHADER_DST}/${DST_FILE}"
         COMMAND slangc "${SHADER_SRC_2}/${SRC_FILE}" -I "${SHADER_SRC_2}/" -o "${SHADER_DST}/${DST_FILE}"
         DEPENDS "${SHADER_SRC_2}/${SRC_FILE}" 
+                "${SHADER_SRC_2}/IScene.slang"
                 "${SHADER_SRC_2}/Intervals.slang"
                 "${SHADER_SRC_2}/Intervals3.slang"
-                "${SHADER_SRC_2}/Stack.slang"
+                "${SHADER_SRC_2}/Ray.slang"
                 "${SHADER_SRC_2}/Scenes.slang"
+                "${SHADER_SRC_2}/Stack.slang"
     )
 
     list(APPEND ALL_SPV_OUTPUTS "${SHADER_DST}/${DST_FILE}")
