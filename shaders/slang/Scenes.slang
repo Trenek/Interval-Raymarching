@@ -86,7 +86,7 @@ struct Heart : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
         float3x3 rot1 = rot3D(float3(1.0, 0.0, 0.0), 3.14 * 3 / 2);
-        float3x3 rot2 = rot3D(float3(0.0, 0.0, 1.0), ubo.iTime);
+        float3x3 rot2 = rot3D(float3(0.0, 0.0, 1.0), 0.0);
         p = mul(rot1, p);
         p = mul(rot2, p);
 
@@ -101,6 +101,13 @@ struct Heart : IScene<T, T3> {
         T z3 = pow(z, 3);
 
         return pow(x2 + (9.0 / 4.0) * y2 + z2 - 1, 3) - x2 * z3 - (9.0 / 80.0) * y2 * z3;
+    }
+};
+
+struct SmallHeart : IScene<T, T3> {
+    [Differentiable]
+    static T evaluate(T3 p) {
+        return Heart::evaluate(2 * p);
     }
 };
 
@@ -148,6 +155,19 @@ struct Steiner : IScene<T, T3> {
         T z2 = pow(z, 2);
 
         return x2 * y2 + y2 * z2 + x2 * z2 + x * y * z;
+    }
+};
+
+struct Funny : IScene<T, T3> {
+    [Differentiable]
+    static T smin(T a, T b, float k) {
+        T h = max(k - abs(a - b), 0.0) / k;
+        return min(a, b) - pow(h, 3) * k * (1.0 / 6.0);
+    }
+
+    [Differentiable]
+    static T evaluate(T3 p) {
+        return smin(SmallHeart::evaluate(p), TangleCube::evaluate(1.5 * p), 0.5);
     }
 };
 

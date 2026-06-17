@@ -83,7 +83,7 @@ public Optional<float> rayMarchInt<T : IScene<Interval, Interval3>>(float3 ro, f
     Interval t0;
     Interval f;
 
-    uint32_t eps = uint32_t(floor(log2(10.0 / epsilon)));
+    uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
     uint32_t h = 1;
     uint32_t l = 1;
 
@@ -232,7 +232,7 @@ public Optional<float> rayMarchNewtonInt<T : IScene<Interval, Interval3>>(float3
     Interval t0;
     Interval f;
 
-    uint32_t eps = uint32_t(floor(log2(10.0 / epsilon)));
+    uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
     uint32_t h = 1;
     uint32_t l = 1;
 
