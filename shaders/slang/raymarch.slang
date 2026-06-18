@@ -10,6 +10,9 @@ struct UniformBufferObject {
 };
 
 [[vk::binding(0, 0)]]
+RWTexture2D<float4> outputTexture;
+
+[[vk::binding(0, 1)]]
 ParameterBlock<UniformBufferObject> ubo;
 
 namespace V {
@@ -102,15 +105,16 @@ bool tryToDraw2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 li
 
 struct FragmentInput {
     float2 fragCoord : TEXCOORD0; 
-    float4 gl_FragCoord : SV_Position;
 };
 
-[shader("fragment")]
-float4 fragMain(FragmentInput input) : SV_Target {
-    const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
+[shader("compute")]
+[numthreads(16, 16, 1)]
+void computeMain(uint3 threadID : SV_DispatchThreadID) {
+    const float2 fragCoord = float2(threadID.xy);
+    const float2 uv = (fragCoord - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(1, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -3.0);
+    const float3 ro = float3(0.0, 0.0, -7.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1, 0.1, 0.1);
@@ -119,5 +123,5 @@ float4 fragMain(FragmentInput input) : SV_Target {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 
-    return float4(color, 1.0);
+    outputTexture[threadID.xy] = float4(color, 1.0);
 }

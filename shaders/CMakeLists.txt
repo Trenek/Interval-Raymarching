@@ -32,7 +32,8 @@ macro(compile_shader2 SRC_FILE DST_FILE)
     list(APPEND ALL_SPV_OUTPUTS "${SHADER_DST}/${DST_FILE}")
 endmacro()
 
-compile_shader("screen.vert" "screen.spv")
+compile_shader("screen.vert" "screenV.spv")
+compile_shader("screen.frag" "screenF.spv")
 compile_shader2("raymarch.slang" "slangRaymarch.spv")
 
 add_custom_target(shaders DEPENDS ${ALL_SPV_OUTPUTS})

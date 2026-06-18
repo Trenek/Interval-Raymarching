@@ -12,7 +12,6 @@
 #include "commandQueue.h"
 
 #include "screenEnum.h"
-#include "camera.h"
 
 static void createScreens(struct EngineCore *engine) {
     struct ResourceManager *entityData = findResource(&engine->resource, ENTITIES);
@@ -21,7 +20,6 @@ static void createScreens(struct EngineCore *engine) {
     struct Pipeline *pipe[] = { 
         findResource(graphicPipelineData, GRAPHIC_PIPELINES_1),
     };
-    struct DescriptorSetLayout *cameraLayout = findResource(findResource(&engine->resource, OBJECT_LAYOUT), OBJECT_LAYOUT_CAMERA);
 
     struct Entity *entity[] = {
         findResource(entityData, ENTITIES_1)
@@ -32,6 +30,8 @@ static void createScreens(struct EngineCore *engine) {
     struct ResourceManager *renderPassCoreData = findResource(&engine->resource, RENDER_PASS);
     struct renderPassCore *clean = findResource(renderPassCoreData, RENDER_PASS_CLEAN);
 
+    struct DescriptorObj *descriptorFrag = findResource(&engine->resource, DESCRIPTOR_FRAG);
+
     addResource(screenData, SCREEN_1,
         createRenderPassObj((struct renderPassBuilder){
             .coordinates = { 0.0, 0.0, 1.0, 1.0 },
@@ -39,6 +39,7 @@ static void createScreens(struct EngineCore *engine) {
             .renderPass = clean,
             .data = (struct pipelineConnectionBuilder[]) {
                 {
+                    .texture = descriptorFrag->descriptorSets,
                     .pipe = pipe[0],
                     .entity = (struct Entity *[]) {
                         entity[0],
@@ -47,15 +48,6 @@ static void createScreens(struct EngineCore *engine) {
                 },
             },
             .qData = 1,
-            .camera = myCameraInfo(&(struct MyBuffer) {
-                .iResolution = { 
-                    engine->graphics.swapChain.extent.width, 
-                    engine->graphics.swapChain.extent.height, 
-                },
-                .iTime = 0,
-                .iTimeDelta = 0
-            }),
-            .cameraDescriptorSetLayout = cameraLayout->descriptorSetLayout,
             .drawRenderPass = drawRenderPass,
         }, &engine->graphics),
         destroyRenderPassObj
@@ -68,6 +60,7 @@ static void createCommandQueues(struct EngineCore *engine) {
     struct ResourceManager *queueData = calloc(1, sizeof(struct ResourceManager));
 
     addResource(queueData, COMMAND_QUEUE_GRAPHICS, createCommandQueue(&engine->graphics, "Graphics Buffer"), destroyCommandQueue);
+    addResource(queueData, COMMAND_QUEUE_COMPUTE, createCommandQueue(&engine->graphics, "Command Buffer"), destroyCommandQueue);
 
     addResource(&engine->resource, COMMAND_QUEUE, queueData, cleanupResourceManager);
 }
