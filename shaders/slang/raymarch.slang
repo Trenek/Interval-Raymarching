@@ -76,7 +76,7 @@ bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lig
     Optional<float> distance = none;
 
     if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
-        color = getColor2<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
+        color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
     return none != distance;
@@ -113,10 +113,10 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float3 ro = float3(0.0, 0.0, -3.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
-    float3 color = float3(0.0, 0.1, 0.1);
+    float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::BarthSextic>(ro, rd, lightDir, color, exp2(-24.0), 10)) {
-        color *= float3(0.5, 0.0, 0.4);
+    if (tryToDraw<I::TangleCube>(ro, rd, lightDir, color, exp2(-36.0), 100)) {
+        color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 
     return float4(color, 1.0);

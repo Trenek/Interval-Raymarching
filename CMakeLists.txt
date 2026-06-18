@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(Tester VERSION 1.0 LANGUAGES C)
+project(ImplicitSurface VERSION 1.0 LANGUAGES C)
 
 add_subdirectory(dependencies)
 
@@ -12,14 +12,14 @@ set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 add_subdirectory(source)
 add_subdirectory(shaders)
 
-add_executable(Tester
+add_executable(ImplicitSurface
     ${SOURCE_FILES} 
     ${ICON}
     "${CMAKE_SOURCE_DIR}/source/main.c"
 )
 
-target_link_libraries(Tester tREngine)
-target_include_directories(Tester PRIVATE 
+target_link_libraries(ImplicitSurface tREngine)
+target_include_directories(ImplicitSurface PRIVATE 
     ${SOURCE_DIRECTORIES}
 )
 set(COMPILE_OPTIONS
@@ -46,7 +46,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
         -O3
     )
     if (WIN32)
-        target_link_options(Tester PRIVATE -mwindows)
+        target_link_options(ImplicitSurface PRIVATE -mwindows)
     endif()
 else()
     set(COMPILE_OPTIONS 
@@ -55,7 +55,7 @@ else()
     )
 endif()
 
-target_compile_options(Tester PUBLIC ${COMPILE_OPTIONS})
-add_dependencies(Tester
+target_compile_options(ImplicitSurface PUBLIC ${COMPILE_OPTIONS})
+add_dependencies(ImplicitSurface
     shaders
 )

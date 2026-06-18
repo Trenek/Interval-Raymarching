@@ -220,26 +220,17 @@ struct BarthSextic : IScene<T, T3> {
 
 struct TangleCube : IScene<T, T3> {
     [Differentiable]
+    static T f(T t) {
+        return pow(t, 4) - 5 * pow(t, 2);
+    }
+
+    [Differentiable]
     static T evaluate(T3 p) {
-        float3x3 rot2 = rot3D(float3(3.0, 2.0, 1.0), ubo.iTime);
+        float3x3 rot2 = rot3D(float3(1.5, 0.5, 2.0), ubo.iTime);
 
         p = mul(rot2, p);
 
-        float r = 5.0;
-
-        T x = p.x; 
-        T y = p.y; 
-        T z = p.z;
-
-        T x2 = pow(x, 2); 
-        T y2 = pow(y, 2); 
-        T z2 = pow(z, 2); 
-
-        T x4 = pow(x, 4);
-        T y4 = pow(y, 4);
-        T z4 = pow(z, 4);
-
-        return x4 - r * x2 + y4 - 5.0 * y2 + z4 - 5.0 * z2 + 11.8;
+        return f(p.x) + f(p.y) + f(p.z) + 11.8;
     }
 };
 

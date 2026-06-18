@@ -11,7 +11,7 @@ void reload(struct EngineCore *engine, enum state *state) {
 }
 
 int main() {
-    struct EngineCore engine = setup("Engine Tester", NULL);
+    struct EngineCore engine = setup("RayCasting", NULL);
     void (*const state[])(struct EngineCore *engine, enum state *state) = {
         [TEST] = test,
         [LOAD_TEST] = loadTest,
