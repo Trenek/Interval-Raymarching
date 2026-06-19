@@ -78,7 +78,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchFloat<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -86,7 +86,7 @@ bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lig
 }
 
 [shader("compute")]
-[numthreads(16, 16, 1)]
+[numthreads(32, 1, 1)] 
 void computeMain(uint3 threadID : SV_DispatchThreadID) {
     const float2 fragCoord = float2(threadID.xy);
     const float2 uv = (fragCoord - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;

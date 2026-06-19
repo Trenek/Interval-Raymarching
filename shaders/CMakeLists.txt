@@ -34,6 +34,7 @@ endmacro()
 
 compile_shader("screen.vert" "screenV.spv")
 compile_shader("screen.frag" "screenF.spv")
-compile_shader2("raymarch.slang" "slangRaymarch.spv")
+compile_shader2("raymarchComp.slang" "slangRaymarch.spv")
+compile_shader2("raymarchFrag.slang" "slangRaymarchF.spv")
 
 add_custom_target(shaders DEPENDS ${ALL_SPV_OUTPUTS})

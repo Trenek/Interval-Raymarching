@@ -54,7 +54,7 @@ static void addObjectLayout(struct EngineCore *this) {
         destroyDescriptorSetLayout
     );
     addResource(objectLayoutData, OBJECT_LAYOUT_CAMERA, 
-        defaultCameraDescriptorSetLayout(this->graphics.device),
+        myCameraDescriptorSetLayout(this->graphics.device),
         destroyDescriptorSetLayout
     );
 
@@ -127,8 +127,8 @@ static void createGraphicPipelines(struct EngineCore *this) {
         .pipelineLayout = graphicsPipelineLayout->pipelineLayout,
         .qRenderPassCore = qRenderPass,
         .renderPassCore = renderPass,
-        .vertexShader = "shaders/screenV.spv",
-        .fragmentShader = "shaders/screenF.spv",
+        .vertexShader = "../../shaders/screenV.spv",
+        .fragmentShader = "../../shaders/screenF.spv",
         .minDepth = 0.0f,
         .maxDepth = 1.0f,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -140,7 +140,7 @@ static void createGraphicPipelines(struct EngineCore *this) {
     }, &this->graphics), destroyPipelineObj);
 
     addResource(graphicPipelinesData, COMPUTE_PIPELINE, createComputePipelineObj((struct ComputePipelineBuilder) {
-        .computeShader = "shaders/slangRaymarch.spv",
+        .computeShader = "../../shaders/slangRaymarch.spv",
         .pipelineLayout = computePipelineLayout->pipelineLayout,
         .debugName = "Potok Obliczeniowy",
     }, &this->graphics), destroyPipelineObj);
