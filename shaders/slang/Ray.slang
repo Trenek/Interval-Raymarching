@@ -83,9 +83,9 @@ public Optional<float> rayMarchInt<T : IScene<Interval, Interval3>>(float3 ro, f
     Interval t0;
     Interval f;
 
-    uint64_t eps = uint64_t(floor(log2(maxDistance / epsilon)));
-    uint64_t h = 1;
-    uint64_t l = 1;
+    uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
+    uint32_t h = 1;
+    uint32_t l = 1;
 
     while (h <= l) {
         t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));

@@ -114,11 +114,11 @@ struct SmallHeart : IScene<T, T3> {
 struct DecoCube : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
-        float3x3 rot1 = rot3D(float3(1.0, 0.0, 0.0), 3.14 * 3 / 2);
-        float3x3 rot2 = rot3D(float3(3.0, 2.0, 1.0), ubo.iTime);
-        p = mul(rot1, p);
-        p = mul(rot2, p);
-
+        // float3x3 rot1 = rot3D(float3(1.0, 0.0, 0.0), 3.14 * 3 / 2);
+        // float3x3 rot2 = rot3D(float3(3.0, 2.0, 1.0), ubo.iTime);
+        // p = mul(rot1, p);
+        // p = mul(rot2, p);
+        //
         float c = pow(0.8f, 2);
 
         T x = p.x;
@@ -237,10 +237,6 @@ struct TangleCube : IScene<T, T3> {
 struct BarthDecic : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
-        float3x3 rot2 = rot3D(float3(1.5, 0.5, 2.0), ubo.iTime);
-
-        p = mul(rot2, p);
-
         T x = p.x;
         T y = p.y;
         T z = p.z;

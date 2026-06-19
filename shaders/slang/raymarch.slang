@@ -78,34 +78,12 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = rayMarch<T>(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
     return none != distance;
 }
-
-bool tryToDraw2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
-    Optional<float> distance = none;
-
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
-        color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
-
-        Optional<float> d2 = rayMarchInt<I::SmallHeart>(ro, rd, epsilon, maxDistance);
-        if (abs(d2.value - distance.value) < 1e-2) {
-            color *= float3(1.0, 0.0, 0.0);
-        }
-        else {
-            color *= float3(0.0, 0.0, 1.0);
-        }
-    }
-
-    return none != distance;
-}
-
-struct FragmentInput {
-    float2 fragCoord : TEXCOORD0; 
-};
 
 [shader("compute")]
 [numthreads(16, 16, 1)]
@@ -114,12 +92,12 @@ void computeMain(uint3 threadID : SV_DispatchThreadID) {
     const float2 uv = (fragCoord - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(1, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -7.0);
+    const float3 ro = float3(0.0, 0.0, -10.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::TangleCube>(ro, rd, lightDir, color, exp2(-36.0), 100)) {
+    if (tryToDraw<I::BarthDecic>(ro, rd, lightDir, color, exp2(-12.0), 100)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 

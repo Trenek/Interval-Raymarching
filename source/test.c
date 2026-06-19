@@ -73,6 +73,21 @@ void test(struct EngineCore *engine, enum state *state) {
         cameraMapped[i] = (char *)cameraMapped[i - 1] + cameraBuffer->range;
     }
     struct MyBuffer my;
+
+    VkQueryPoolCreateInfo queryPoolInfo = {
+        .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+        .queryType = VK_QUERY_TYPE_TIMESTAMP,
+        .queryCount = 2
+    };
+    VkQueryPool queryPool;
+    vkCreateQueryPool(engine->graphics.device, &queryPoolInfo, NULL, &queryPool);
+
+    VkPhysicalDeviceProperties deviceProperties;
+    vkGetPhysicalDeviceProperties(engine->graphics.physicalDevice, &deviceProperties);
+
+    double res = 0;
+    int num = 0;
+
     while (TEST == state[0] && !shouldWindowClose(engine->window)) {
         if (isKeyJustPressed(&engine->window, GLFW_KEY_SPACE)) {
             running = !running;
@@ -85,11 +100,12 @@ void test(struct EngineCore *engine, enum state *state) {
         my.iResolution[1] = engine->graphics.swapChain.extent.height;
 
         memcpy(cameraMapped[engine->currentFrame], &my, sizeof(struct MyBuffer));
+
         engineUpdate(engine, qRenderPass, renderPass);
         
         aquireNextImage(engine, graphics->inFlightFence, graphics->semaphore);
 
-        queueCompute(compute, engine, qComputePass, computePass);
+        queueComputeQP(compute, engine, qComputePass, computePass, queryPool);
         queueDraw(graphics, engine, qRenderPass, renderPass, 2, 
             (VkSemaphore []) {
                 compute->semaphore[engine->currentFrame],
@@ -106,5 +122,26 @@ void test(struct EngineCore *engine, enum state *state) {
         if (isKeyJustPressed(&engine->window, GLFW_KEY_R)) {
             state[0] = RELOAD;
         }
+
+        uint64_t timestamps[2] = {};
+        vkGetQueryPoolResults(
+            engine->graphics.device, 
+            queryPool, 
+            0, 2, 
+            sizeof(timestamps), 
+            timestamps, 
+            sizeof(uint64_t), 
+            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
+        );
+
+        // Calculate exact execution duration
+        double nanoseconds = (double)(timestamps[1] - timestamps[0]) * (double)deviceProperties.limits.timestampPeriod;
+        double milliseconds = nanoseconds / 1000000.0;
+        res += milliseconds;
+        num += 1;
+
+        // Use %.3f to print a clean float with 3 decimal places (e.g., "1.234 ms")
+        printf("\r%f ms        ", res / num);
+
     }
 }
