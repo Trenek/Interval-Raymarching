@@ -19,6 +19,10 @@
 #include "camera.h"
 #include "bufferObj.h"
 
+int compare(const void *a, const void *b) {
+    return *(float *)a - *(float *)b;
+}
+
 void test(struct EngineCore *engine, enum state *state) {
     struct ResourceManager *screenData = findResource(&engine->resource, SCREEN);
     struct ResourceManager *renderPassCoreData = findResource(&engine->resource, RENDER_PASS);
@@ -87,6 +91,8 @@ void test(struct EngineCore *engine, enum state *state) {
 
     double res = 0;
     int num = 0;
+    float times[10'000] = {};
+    size_t maxTime = 0;
 
     while (TEST == state[0] && !shouldWindowClose(engine->window)) {
         if (isKeyJustPressed(&engine->window, GLFW_KEY_SPACE)) {
@@ -112,7 +118,7 @@ void test(struct EngineCore *engine, enum state *state) {
                 graphics->semaphore[engine->currentFrame],
             },
             (VkPipelineStageFlags []) {
-                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             }
         );
@@ -134,14 +140,18 @@ void test(struct EngineCore *engine, enum state *state) {
             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
         );
 
-        // Calculate exact execution duration
         double nanoseconds = (double)(timestamps[1] - timestamps[0]) * (double)deviceProperties.limits.timestampPeriod;
         double milliseconds = nanoseconds / 1000000.0;
+        if (maxTime < 10'000) {
+            maxTime[times] = milliseconds;
+            maxTime += 1;
+            qsort(times, maxTime, sizeof(float), compare);
+        }
+
         res += milliseconds;
         num += 1;
 
-        // Use %.3f to print a clean float with 3 decimal places (e.g., "1.234 ms")
-        printf("\r%f ms        ", res / num);
+        printf("\r%f ms   median %f ms       ", res / num, times[maxTime / 2]);
 
     }
 }
