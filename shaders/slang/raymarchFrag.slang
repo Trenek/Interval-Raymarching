@@ -13,23 +13,17 @@ struct UniformBufferObject {
 ParameterBlock<UniformBufferObject> ubo;
 
 namespace V {
-    #define T float
-    #define T3 float3
+    typedef float T;
+    typedef float3 T3;
 
     #include "Scenes.slang"
-
-    #undef T
-    #undef T3
 }
 
 namespace I {
-    #define T Interval
-    #define T3 Interval3
+    typedef Interval T;
+    typedef Interval3 T3;
 
     #include "Scenes.slang"
-
-    #undef T
-    #undef T3
 }
 
 float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance, float3 lightDirection) {
@@ -115,7 +109,7 @@ float4 fragMain(FragmentInput input) : SV_Target {
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::TangleCube>(ro, rd, lightDir, color, exp2(-12.0), 100)) {
+    if (tryToDraw<I::Heart>(ro, rd, lightDir, color, exp2(-24.0), 100)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 

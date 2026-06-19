@@ -140,7 +140,7 @@ static void createGraphicPipelines(struct EngineCore *this) {
     }, &this->graphics), destroyPipelineObj);
 
     addResource(graphicPipelinesData, COMPUTE_PIPELINE, createComputePipelineObj((struct ComputePipelineBuilder) {
-        .computeShader = "../../shaders/slangRaymarch.spv",
+        .computeShader = "../../shaders/slangBeamcast.spv",
         .pipelineLayout = computePipelineLayout->pipelineLayout,
         .debugName = "Potok Obliczeniowy",
     }, &this->graphics), destroyPipelineObj);

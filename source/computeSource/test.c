@@ -52,8 +52,8 @@ void test(struct EngineCore *engine, enum state *state) {
                 descriptorComp->descriptorSets,
                 cameraDescriptor->descriptorSets,
             },
-            .groupCountX = (engine->graphics.swapChain.extent.width + 31) / 32,
-            .groupCountY = (engine->graphics.swapChain.extent.height + 0) / 1,
+            .groupCountX = (engine->graphics.swapChain.extent.width + 15) / 16,
+            .groupCountY = (engine->graphics.swapChain.extent.height + 15) / 16,
         }
     };
     size_t qComputePass = sizeof(computePass) / sizeof(struct ComputePass);
@@ -76,7 +76,7 @@ void test(struct EngineCore *engine, enum state *state) {
     for (size_t i = 1; i < MAX_FRAMES_IN_FLIGHT; i += 1) {
         cameraMapped[i] = (char *)cameraMapped[i - 1] + cameraBuffer->range;
     }
-    struct MyBuffer my;
+    struct MyBuffer my = {};
 
     VkQueryPoolCreateInfo queryPoolInfo = {
         .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,

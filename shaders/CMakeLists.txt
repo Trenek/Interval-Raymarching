@@ -27,6 +27,7 @@ macro(compile_shader2 SRC_FILE DST_FILE)
                 "${SHADER_SRC_2}/Ray.slang"
                 "${SHADER_SRC_2}/Scenes.slang"
                 "${SHADER_SRC_2}/Stack.slang"
+                "${SHADER_SRC_2}/BeamCast.slang"
     )
 
     list(APPEND ALL_SPV_OUTPUTS "${SHADER_DST}/${DST_FILE}")
@@ -35,6 +36,7 @@ endmacro()
 compile_shader("screen.vert" "screenV.spv")
 compile_shader("screen.frag" "screenF.spv")
 compile_shader2("raymarchComp.slang" "slangRaymarch.spv")
+compile_shader2("beamcastComp.slang" "slangBeamcast.spv")
 compile_shader2("raymarchFrag.slang" "slangRaymarchF.spv")
 
 add_custom_target(shaders DEPENDS ${ALL_SPV_OUTPUTS})

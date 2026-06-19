@@ -209,10 +209,17 @@ public Optional<float> rayMarchNewton<T : IScene<Interval, Interval3>>(float3 ro
         if (f.contains(0.0)) {
             Interval dF = dot(gradient<T>(ro + rd * t0), rd);
 
-            Optional<float> n = Newton<T>(ro, rd, t0, f, dF, epsilon);
+            Optional<float> n = none;
+
+            if (!dF.contains(0.0)) {
+                n = Newton<T>(ro, rd, t0, f, dF, epsilon);
+            }
 
             if (n != none) {
                 return n;
+            }
+            else if (t0.length() < epsilon) {
+                return t0.minVal;
             }
             else {
                 float mid = t0.mid();
