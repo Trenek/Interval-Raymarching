@@ -24,6 +24,8 @@ macro(compile_shader2 SRC_FILE DST_FILE)
                 "${SHADER_SRC_2}/IScene.slang"
                 "${SHADER_SRC_2}/Intervals.slang"
                 "${SHADER_SRC_2}/Intervals3.slang"
+                "${SHADER_SRC_2}/Affine.slang"
+                "${SHADER_SRC_2}/Affine3.slang"
                 "${SHADER_SRC_2}/Ray.slang"
                 "${SHADER_SRC_2}/Scenes.slang"
                 "${SHADER_SRC_2}/Stack.slang"

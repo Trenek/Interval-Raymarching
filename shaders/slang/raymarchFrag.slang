@@ -2,6 +2,8 @@ import Intervals;
 import Intervals3;
 import IScene;
 import Ray;
+import Affine;
+import Affine3;
 
 struct UniformBufferObject {
     float2 iResolution;
@@ -26,6 +28,13 @@ namespace I {
     #include "Scenes.slang"
 }
 
+namespace A {
+    typedef Affine T;
+    typedef Affine3 T3;
+
+    #include "Scenes.slang"
+}
+
 float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance, float3 lightDirection) {
     float3 normal = getNormal<T>(ro + rd * distance);
 
@@ -35,7 +44,7 @@ float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance,
 bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchStep<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = RayMarcher<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir);
     }
 
@@ -48,6 +57,12 @@ float3 getColor<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float dis
     return 0.15 + clamp(dot(normal, lightDirection), 0.0, 1.0);
 }
 
+float3 getColor<T : IScene<Affine, Affine3>>(float3 ro, float3 rd, float distance, float3 lightDirection, float epsilon, float maxDistance) {
+    float3 normal = getNormal<T>(ro + rd * Affine(distance)).mid();
+
+    return 0.15 + clamp(dot(normal, lightDirection), 0.0, 1.0);
+}
+
 float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float distance, float3 lightDirection, float epsilon, float maxDistance) {
     float3 normal = getNormal<T>(ro + rd * Interval(distance)).mid();
     float diffuse = clamp(dot(normal, lightDirection), 0.0, 1.0);
@@ -55,7 +70,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
     float3 hitPoint = ro + rd * distance;
     float3 shadowOrigin = hitPoint + lightDirection;
     
-    Optional<float> shadowDistance = rayMarchInt<T>(shadowOrigin, lightDirection, epsilon, maxDistance);
+    Optional<float> shadowDistance = IntervalRayCasterInt<T>::checkIntersection(shadowOrigin, lightDirection, epsilon, maxDistance);
     
     float shadowFactor = 1.0;
     
@@ -69,7 +84,17 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCasterInt<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+        color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
+    }
+
+    return none != distance;
+}
+
+bool tryToDraw<T : IScene<Affine, Affine3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
+    Optional<float> distance = none;
+
+    if (none != (distance = AffineRayCasterFloat<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -79,10 +104,10 @@ bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lig
 bool tryToDraw2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCasterInt<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
 
-        Optional<float> d2 = rayMarchInt<I::SmallHeart>(ro, rd, epsilon, maxDistance);
+        Optional<float> d2 = IntervalRayCasterIntNewton<I::SmallHeart>::checkIntersection(ro, rd, epsilon, maxDistance);
         if (abs(d2.value - distance.value) < 1e-2) {
             color *= float3(1.0, 0.0, 0.0);
         }
@@ -104,12 +129,12 @@ float4 fragMain(FragmentInput input) : SV_Target {
     const float2 uv = (input.gl_FragCoord.xy - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(1, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -3.0);
+    const float3 ro = float3(0.0, 0.0, -6.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::Heart>(ro, rd, lightDir, color, exp2(-24.0), 100)) {
+    if (tryToDraw<I::Mitchell>(ro, rd, lightDir, color, exp2(-12.0), 10)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 

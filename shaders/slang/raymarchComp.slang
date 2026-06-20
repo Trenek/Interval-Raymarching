@@ -44,7 +44,7 @@ float3 getColor<T : IScene<float, float3>>(float3 ro, float3 rd, float distance,
 bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchStep<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = RayMarcher<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir);
     }
 
@@ -64,7 +64,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
     float3 hitPoint = ro + rd * distance;
     float3 shadowOrigin = hitPoint + lightDirection;
     
-    Optional<float> shadowDistance = rayMarchInt<T>(shadowOrigin, lightDirection, epsilon, maxDistance);
+    Optional<float> shadowDistance = IntervalRayCasterInt<T>::checkIntersection(shadowOrigin, lightDirection, epsilon, maxDistance);
     
     float shadowFactor = 1.0;
     
@@ -78,7 +78,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = rayMarchInt<T>(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCasterInt<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -97,7 +97,7 @@ void computeMain(uint3 threadID : SV_DispatchThreadID) {
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::BarthDecic>(ro, rd, lightDir, color, exp2(-12.0), 100)) {
+    if (tryToDraw<I::Sphere>(ro, rd, lightDir, color, exp2(-12.0), 100)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 

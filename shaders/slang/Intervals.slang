@@ -235,3 +235,6 @@ MAKE_UNARY_OPERATOR(abs, abs)
 
 MAKE_UNARY_OPERATOR_POW(pow, pow)
 
+public vector<Interval, 3> makeInterval3(float a, float b, float c) {
+    return vector<Interval, 3>(Interval(a), Interval(b), Interval(c));
+}

@@ -140,7 +140,7 @@ void test(struct EngineCore *engine, enum state *state) {
             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
         );
 
-        double nanoseconds = (double)(timestamps[1] - timestamps[0]) * (double)deviceProperties.limits.timestampPeriod;
+        double nanoseconds = (double)(timestamps[1] - timestamps[0]) * deviceProperties.limits.timestampPeriod;
         double milliseconds = nanoseconds / 1000000.0;
         if (maxTime < 10'000) {
             maxTime[times] = milliseconds;
@@ -152,6 +152,5 @@ void test(struct EngineCore *engine, enum state *state) {
         num += 1;
 
         printf("\r%f ms   median %f ms       ", res / num, times[maxTime / 2]);
-
     }
 }
