@@ -43,12 +43,11 @@ float4 draw<S : IScene<Interval, Interval3>>(uint2 threadID, uint maxDepth, floa
     Interval U0 = Interval(-1.0, 1.0) * aspect;
     Interval V0 = Interval(-1.0, 1.0);
 
-    return Paint<S>(BeamCasterFloat<S>::Subdivide(U0, V0, 0.0, 0, 2.0, maxDepth, maxDistance, cameraPos, normCoord));
+    return Paint<S>(BeamCasterFloat<S>::Subdivide(U0, V0, 0.0, 0, 1.0, maxDepth, maxDistance, cameraPos, normCoord));
 }
 
 [shader("compute")]
 [numthreads(16, 16, 1)] 
 void computeMain(uint3 threadID : SV_DispatchThreadID) {
-    outputTexture[threadID.xy] = 
-        draw<I::BarthDecic>(threadID.xy, 12, 10.0, float3(0.0, 0.0, 3.0));
+    outputTexture[threadID.xy] = draw<I::BarthDecic>(threadID.xy, 12, 10.0, float3(0.0, 0.0, 5.0));
 }

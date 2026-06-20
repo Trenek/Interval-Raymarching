@@ -237,9 +237,9 @@ struct TangleCube : IScene<T, T3> {
 struct BarthDecic : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
-        float3x3 rot2 = rot3D(float3(1.0, 2.0, 1.5), ubo.iTime);
-
-        p = mul(rot2, p);
+        // float3x3 rot2 = rot3D(float3(1.0, 2.0, 1.5), ubo.iTime);
+        //
+        // p = mul(rot2, p);
         T x = p.x;
         T y = p.y;
         T z = p.z;
@@ -271,3 +271,39 @@ struct BarthDecic : IScene<T, T3> {
         return rawBarthDecic;
     }
 };
+
+struct Chmutov : IScene<T, T3> {
+    [Differentiable]
+    static T f(T t) {
+        return 64 * pow(t, 7) - 112 * pow(t, 5) + 56 * pow(t, 3) - 7 * t;
+    }
+
+    [Differentiable]
+    static T evaluate(T3 p) {
+        float3x3 rot2 = rot3D(float3(1.0, 2.0, 1.5), ubo.iTime);
+
+        p = mul(rot2, p);
+        return f(p.x) + f(p.y) + f(p.z) + 1;
+    }
+}
+
+struct Mitchell : IScene<T, T3> {
+    [Differentiable]
+    static T evaluate(T3 p) {
+        // float3x3 rot2 = rot3D(float3(1.0, 2.0, 1.5), ubo.iTime);
+        //
+        // p = mul(rot2, p);
+
+        T x = p.x;
+        T y = p.y;
+        T z = p.z;
+
+        T x2 = pow(x, 2);
+        T y2 = pow(y, 2);
+        T z2 = pow(z, 2);
+
+        T x4 = pow(x, 4);
+
+        return 4 * (x4 + pow(y2 + z2, 2) + 17 * x2 * (y2 + z2)) - 20 * (x2 + y2 + z2) + 17;
+    }
+}
