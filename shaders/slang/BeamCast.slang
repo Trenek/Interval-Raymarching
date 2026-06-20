@@ -112,29 +112,24 @@ public struct BeamCasterInt<S : IScene<Interval, Interval3>> : IBeamCaster<S> {
         float tStart = T.minVal;
 
         uint32_t eps = uint32_t(floor(log2(T.length() / epsilon)));
-        uint32_t h = 1;
-        uint32_t l = 1;
+        uint32_t2 idx = { 1, 1 };
 
-        while (h <= l) {
-            Interval t0 = tStart + Interval(float(h - 1) * tLength / l, float(h) * tLength / l);
+        while (idx.x <= idx.y) {
+            Interval t0 = tStart + Interval(float(idx.x - 1) * tLength / idx.y, float(idx.x) * tLength / idx.y);
             Interval3 p = Interval3(U * t0, V * t0, t0);
             Interval f = S::evaluate(p - cameraOffset);
 
             if (f.contains(0.0)) {
-                if (firstbithigh(l) >= eps) {
+                if (firstbithigh(idx.y) >= eps) {
                     return t0;
                 }
 
-                h = 1 + 2 * (h - 1);
-                l *= 2;
+                idx <<= 1;
+                idx.x -= 1;
             }
             else {
-                uint shift = firstbitlow(h & (-h));
-
-                l >>= shift;
-                h >>= shift;
-
-                h += 1;
+                idx >>= firstbitlow(idx.x);
+                idx.x += 1;
             }
         }
 
@@ -146,11 +141,11 @@ public struct BeamCasterFloat<S : IScene<Interval, Interval3>> : IBeamCaster<S> 
     public static Optional<Interval> BeamCast(Interval U, Interval V, Interval T, float3 cameraOffset, float epsilon) {
         Optional<Interval> result = none;
 
-        int dlast = int(round(log2(T.length() / epsilon)));
-        int d = 0;
-
         float tLength = T.length();
         float tStart = T.minVal;
+
+        int dlast = int(round(log2(T.length() / epsilon)));
+        int d = 0;
 
         float2 t = float2(0.0f, tLength);
         float tincr = tLength * 0.5f;
