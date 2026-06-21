@@ -152,6 +152,59 @@ public struct IntDivider : IDivider {
     }
 }
 
+public struct FloatDivider : IDivider {
+    int dlast;
+    int d;
+
+    float2 t;
+    float tincr;
+
+    public __init(float epsilon, float maxDistance) {
+        this.dlast = int(round(log2(maxDistance / epsilon)));
+        this.d = 0;
+
+        this.t = float2(0.0f, maxDistance);
+        this.tincr = maxDistance * 0.5f;
+    }
+
+    [[mutating]]
+    Interval getNext() {
+        this.t.y = this.t.x + tincr;
+
+        return Interval(t);
+    }
+
+    bool lastingCondition() {
+        return d != -1;
+    }
+
+    [[mutating]]
+    void goDown() {
+        this.d += 1;
+        this.tincr *= 0.5f;
+    }
+
+    [[mutating]]
+    void goUp() {
+        t.x = t.y;
+
+        float fp = frac(0.5f * t.x / tincr);
+
+        if (fp < 1e-8) {
+            for (int j = 0; j <= dlast; j += 1) {
+                tincr *= 2;
+                d--;
+                fp = frac(0.5 * t.x / tincr);
+                if (d == -1 || fp > 1e-8) break;
+            }
+        }
+    }
+
+    bool acceptanceCondition() {
+        return this.d == this.dlast;
+    }
+}
+
 public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;

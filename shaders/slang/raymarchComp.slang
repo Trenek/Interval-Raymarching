@@ -64,7 +64,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
     float3 hitPoint = ro + rd * distance;
     float3 shadowOrigin = hitPoint + lightDirection;
     
-    Optional<float> shadowDistance = IntervalRayCasterInt<T>::checkIntersection(shadowOrigin, lightDirection, epsilon, maxDistance);
+    Optional<float> shadowDistance = IntervalRayCaster<T, IntDivider>::checkIntersection(shadowOrigin, lightDirection, epsilon, maxDistance);
     
     float shadowFactor = 1.0;
     
@@ -78,7 +78,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = IntervalRayCasterInt<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCaster<T, IntDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 

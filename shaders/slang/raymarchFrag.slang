@@ -66,7 +66,7 @@ bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir,
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = IntervalRayCaster<T, IntDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCaster<T, FloatDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
