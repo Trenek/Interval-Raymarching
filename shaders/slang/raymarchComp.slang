@@ -2,6 +2,7 @@ import Intervals;
 import Intervals3;
 import IScene;
 import Ray;
+import Divider;
 
 struct UniformBufferObject {
     float2 iResolution;

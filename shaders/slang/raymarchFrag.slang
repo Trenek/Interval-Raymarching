@@ -4,6 +4,7 @@ import IScene;
 import Ray;
 import Affine;
 import Affine3;
+import Divider;
 
 struct UniformBufferObject {
     float2 iResolution;
@@ -66,7 +67,7 @@ bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir,
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = IntervalRayCaster<T, FloatDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCasterNewton<T, StackDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -76,7 +77,7 @@ bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lig
 bool tryToDraw<T : IScene<Affine, Affine3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = AffineRayCasterInt<T>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = AffineRayCaster<T, IntDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 

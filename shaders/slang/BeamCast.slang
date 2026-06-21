@@ -69,6 +69,37 @@ public interface IBeamCaster<S : IScene<Interval, Interval3>> {
     }
 }
 
+public struct BeamCaster<S : IScene<Interval, Interval3>, D : IDivider> : IBeamCaster<S> {
+    public static Optional<Interval> BeamCast(Interval U, Interval V, Interval T, float3 cameraOffset, float epsilon) {
+        Optional<Interval> result = none;
+
+        Interval t = T;
+        Interval f;
+
+        D d = D(epsilon, T);
+
+        while (d.lastingCondition()) {
+            t = d.getNext();
+            
+            Interval3 p = Interval3(U * t, V * t, t);
+            f = S::evaluate(p - cameraOffset);
+
+            if (f.contains(0.0)) {
+                if (d.acceptanceCondition()) {
+                    return t;
+                }
+
+                d.goDown();
+            }
+            else {
+                d.goUp();
+            }
+        }
+
+        return result;
+    }
+}
+
 public struct BeamCasterStack<S : IScene<Interval, Interval3>> : IBeamCaster<S> {
     public static Optional<Interval> BeamCast(Interval U, Interval V, Interval T, float3 cameraOffset, float epsilon) {
         Optional<Interval> result = none;

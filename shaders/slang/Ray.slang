@@ -1,11 +1,13 @@
 module Ray;
 
+import Stack;
 import Intervals;
 import Intervals3;
 import Affine;
 import Affine3;
 import IScene;
-import Stack;
+
+import Divider;
 
 public interface IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance);
@@ -56,155 +58,6 @@ public struct RayMarcher<T : IScene<float, float3>> : IIntersector {
     }
 }
 
-public interface IDivider {
-    public __init(float epsilon, float maxDistance);
-
-    bool lastingCondition();
-    bool acceptanceCondition();
-    [[mutating]] Interval getNext();
-    [[mutating]] void goDown();
-    [[mutating]] void goUp();
-}
-
-public struct StackDivider : IDivider {
-    Stack<Interval, 64> stack;
-    Interval curr;
-    float epsilon;
-
-    public __init(float epsilon, float maxDistance) {
-        this.curr = Interval(0);
-        this.epsilon = epsilon;
-        stack.push(Interval(0, maxDistance));
-    }
-
-    [[mutating]]
-    Interval getNext() {
-        return curr = stack.pop();
-    }
-
-    bool lastingCondition() {
-        return false == stack.isEmpty() && false == stack.isFull();
-    }
-
-    [[mutating]]
-    void goDown() {
-        Interval t = this.curr;
-        float mid = t.mid();
-
-        stack.push(Interval(mid, t.maxVal));
-        stack.push(Interval(t.minVal, mid));
-    }
-
-    [[mutating]]
-    void goUp() {}
-
-    bool acceptanceCondition() {
-        return this.curr.length() < this.epsilon;
-    }
-}
-
-public struct IntDivider : IDivider {
-    uint32_t eps;
-    uint32_t h = 1;
-    uint32_t l = 1;
-
-    float epsilon;
-    float maxDistance;
-
-    public __init(float epsilon, float maxDistance) {
-        this.epsilon = epsilon;
-        this.maxDistance = maxDistance;
-
-        this.eps = uint32_t(floor(log2(maxDistance / epsilon)));
-    }
-
-    Interval getNext() {
-        return Interval(float2(
-            (this.h - 1) * this.maxDistance / this.l, 
-            this.h * this.maxDistance / this.l
-        ));
-    }
-
-    bool lastingCondition() {
-        return this.h <= this.l;
-    }
-
-    [[mutating]]
-    void goDown() {
-        this.h <<= 1;
-        this.l <<= 1;
-
-        this.h -= 1;
-    }
-
-    [[mutating]]
-    void goUp() {
-        uint shift = firstbitlow(h & (-h));
-
-        this.h >>= shift;
-        this.l >>= shift;
-
-        this.h += 1;
-    }
-
-    bool acceptanceCondition() {
-        return firstbithigh(this.l) >= this.eps;
-    }
-}
-
-public struct FloatDivider : IDivider {
-    int dlast;
-    int d;
-
-    float2 t;
-    float tincr;
-
-    public __init(float epsilon, float maxDistance) {
-        this.dlast = int(round(log2(maxDistance / epsilon)));
-        this.d = 0;
-
-        this.t = float2(0.0f, maxDistance);
-        this.tincr = maxDistance * 0.5f;
-    }
-
-    [[mutating]]
-    Interval getNext() {
-        this.t.y = this.t.x + tincr;
-
-        return Interval(t);
-    }
-
-    bool lastingCondition() {
-        return d != -1;
-    }
-
-    [[mutating]]
-    void goDown() {
-        this.d += 1;
-        this.tincr *= 0.5f;
-    }
-
-    [[mutating]]
-    void goUp() {
-        t.x = t.y;
-
-        float fp = frac(0.5f * t.x / tincr);
-
-        if (fp < 1e-8) {
-            for (int j = 0; j <= dlast; j += 1) {
-                tincr *= 2;
-                d--;
-                fp = frac(0.5 * t.x / tincr);
-                if (d == -1 || fp > 1e-8) break;
-            }
-        }
-    }
-
-    bool acceptanceCondition() {
-        return this.d == this.dlast;
-    }
-}
-
 public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
@@ -234,138 +87,28 @@ public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider> :
     }
 }
 
-public struct AffineRayCasterInt<T : IScene<Affine, Affine3>> : IIntersector {
+public struct AffineRayCaster<S : IScene<Affine, Affine3>, D : IDivider> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
-        Interval t0;
+        Interval t;
         Affine f;
 
-        uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
-        uint32_t h = 1;
-        uint32_t l = 1;
+        D d = D(epsilon, maxDistance);
 
-        while (h <= l) {
-            t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));
-            f = T::evaluate(ro + rd * Affine(t0));
+        while (d.lastingCondition()) {
+            t = d.getNext();
+            f = S::evaluate(ro + rd * Affine(t));
 
             if (f.contains(0.0)) {
-                if (firstbithigh(l) >= eps) {
-                    return t0.minVal;
+                if (d.acceptanceCondition()) {
+                    return t.minVal;
                 }
 
-                h = 1 + 2 * (h - 1);
-                l *= 2;
+                d.goDown();
             }
             else {
-                uint shift = firstbitlow(h & (-h));
-
-                l >>= shift;
-                h >>= shift;
-
-                h += 1;
-            }
-        }
-
-        return result;
-    }
-}
-
-public struct IntervalRayCasterFloat<T : IScene<Interval, Interval3>> : IIntersector {
-    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
-        Optional<float> result = none;
-
-        int dlast = int(round(log2(maxDistance / epsilon)));
-        int d = 0;
-
-        float2 t = float2(0.0f, maxDistance);
-        float tincr = maxDistance * 0.5f;
-
-        Interval t0 = Interval(t);
-        Interval f = T::evaluate(ro + rd * t0);
-
-        if (f.contains(0.0f)) while (true) {
-            t.y = t.x + tincr;
-
-            t0 = Interval(t);
-            f = T::evaluate(ro + rd * t0);
-
-            if (f.contains(0.0f)) {
-                if (d == dlast) {
-                    return t.x;
-                }
-
-                d++;
-                tincr *= 0.5f;
-            }
-            else {
-                t.x = t.y;
-
-                float fp = frac(0.5f * t.x / tincr);
-
-                if (fp < 1e-8) {
-                    for (int j = 0; j <= dlast; j += 1) {
-                        tincr *= 2;
-                        d--;
-                        fp = frac(0.5 * t.x / tincr);
-                        if (d == -1 || fp > 1e-8) break;
-                    }
-
-                    if (d == -1) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-}
-
-public struct AffineRayCasterFloat<T : IScene<Affine, Affine3>> : IIntersector {
-    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
-        Optional<float> result = none;
-
-        int dlast = int(round(log2(maxDistance / epsilon)));
-        int d = 0;
-
-        float2 t = float2(0.0f, maxDistance);
-        float tincr = maxDistance * 0.5f;
-
-        Interval t0 = Interval(t);
-        Affine f = T::evaluate(ro + rd * Affine(t0));
-
-        if (f.contains(0.0f)) while (true) {
-            t.y = t.x + tincr;
-
-            t0 = Interval(t);
-            f = T::evaluate(ro + rd * Affine(t0));
-
-            if (f.contains(0.0f)) {
-                if (d == dlast) {
-                    return t.x;
-                }
-
-                d++;
-                tincr *= 0.5f;
-            }
-            else {
-                t.x = t.y;
-
-                float fp = frac(0.5f * t.x / tincr);
-
-                if (fp < 1e-8) {
-                    for (int j = 0; j <= dlast; j += 1) {
-                        tincr *= 2;
-                        d--;
-                        fp = frac(0.5 * t.x / tincr);
-                        if (d == -1 || fp > 1e-8) break;
-                    }
-
-                    if (d == -1) {
-                        break;
-                    }
-                }
+                d.goUp();
             }
         }
 
@@ -405,90 +148,38 @@ Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, In
     return none;
 }
 
-public struct IntervalRayCasterStackNewton<T : IScene<Interval, Interval3>> : IIntersector {
-    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
-        Optional<float> result = none;
-
-        Interval t0 = Interval(0.0, maxDistance);
-        Interval f;
-
-        Stack<Interval, 64> stack;
-        stack.push(t0);
-
-        while (false == stack.isEmpty()) {
-            t0 = stack.pop();
-            f = T::evaluate(ro + rd * t0);
-
-            if (f.contains(0.0)) {
-                Interval dF = dot(gradient<T>(ro + rd * t0), rd);
-
-                Optional<float> n = none;
-
-                if (!dF.contains(0.0)) {
-                    n = Newton<T>(ro, rd, t0, f, dF, epsilon);
-                }
-
-                if (n != none) {
-                    return n;
-                }
-                else if (t0.length() < epsilon) {
-                    return t0.minVal;
-                }
-                else {
-                    float mid = t0.mid();
-
-                    stack.push(Interval(mid, t0.maxVal));
-                    stack.push(Interval(t0.minVal, mid));
-                }
-            }
-        }
-
-        return result;
-    }
-}
-
-public struct IntervalRayCasterIntNewton<T : IScene<Interval, Interval3>> : IIntersector {
+public struct IntervalRayCasterNewton<S : IScene<Interval, Interval3>, D : IDivider> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
         Interval t0;
         Interval f;
 
-        uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
-        uint32_t h = 1;
-        uint32_t l = 1;
+        D d = D(epsilon, maxDistance);
 
-        while (h <= l) {
-            t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));
-            f = T::evaluate(ro + rd * t0);
+        while (d.lastingCondition()) {
+            t0 = d.getNext();
+            f = S::evaluate(ro + rd * t0);
 
             if (f.contains(0.0)) {
-                Interval dF = dot(gradient<T>(ro + rd * t0), rd);
+                Interval dF = dot(gradient<S>(ro + rd * t0), rd);
 
-                Optional<float> n = none;
-                
                 if (!dF.contains(0.0)) {
-                    n = Newton<T>(ro, rd, t0, f, dF, epsilon);
-                }
+                    Optional<float> n = Newton<S>(ro, rd, t0, f, dF, epsilon);
 
-                if (n != none) {
-                    return n;
+                    if (n != none) {
+                        return n;
+                    }
                 }
-
-                if (firstbithigh(l) >= eps) {
+                
+                if (d.acceptanceCondition()) {
                     return t0.minVal;
                 }
 
-                h = 1 + 2 * (h - 1);
-                l *= 2;
+                d.goDown();
             }
             else {
-                uint shift = firstbitlow(h & (-h));
-
-                l >>= shift;
-                h >>= shift;
-
-                h += 1;
+                d.goUp();
             }
         }
 
@@ -528,48 +219,38 @@ Optional<float> Newton<T : IScene<Affine, Affine3>>(float3 ro, float3 rd, Interv
     return none;
 }
 
-public struct AffineRayCasterIntNewton<T : IScene<Affine, Affine3>> : IIntersector {
+public struct AffineRayCasterNewton<S : IScene<Affine, Affine3>, D : IDivider> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
         Interval t0;
         Affine f;
 
-        uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
-        uint32_t h = 1;
-        uint32_t l = 1;
+        D d = D(epsilon, maxDistance);
 
-        while (h <= l) {
-            t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));
-            f = T::evaluate(ro + rd * Affine(t0));
+        while (d.lastingCondition()) {
+            t0 = d.getNext();
+            f = S::evaluate(ro + rd * Affine(t0));
 
             if (f.contains(0.0)) {
-                Affine dF = dot(gradient<T>(ro + rd * Affine(t0)), rd);
+                Affine dF = dot(gradient<S>(ro + rd * Affine(t0)), rd);
 
-                Optional<float> n = none;
-                
                 if (!dF.contains(0.0)) {
-                    n = Newton<T>(ro, rd, t0, f, dF, epsilon);
-                }
+                    Optional<float> n = Newton<S>(ro, rd, t0, f, dF, epsilon);
 
-                if (n != none) {
-                    return n;
+                    if (n != none) {
+                        return n;
+                    }
                 }
-
-                if (firstbithigh(l) >= eps) {
+                
+                if (d.acceptanceCondition()) {
                     return t0.minVal;
                 }
 
-                h = 1 + 2 * (h - 1);
-                l *= 2;
+                d.goDown();
             }
             else {
-                uint shift = firstbitlow(h & (-h));
-
-                l >>= shift;
-                h >>= shift;
-
-                h += 1;
+                d.goUp();
             }
         }
 

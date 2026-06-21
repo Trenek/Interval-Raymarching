@@ -2,6 +2,7 @@ import IScene;
 import Intervals;
 import Intervals3;
 import Stack;
+import Divider;
 
 struct UniformBufferObject {
     float2 iResolution;
@@ -43,7 +44,7 @@ float4 draw<S : IScene<Interval, Interval3>>(uint2 threadID, uint maxDepth, floa
     Interval U0 = Interval(-1.0, 1.0) * aspect;
     Interval V0 = Interval(-1.0, 1.0);
 
-    return Paint<S>(BeamCasterInt<S>::Subdivide(U0, V0, 0.0, 0, 1.0, maxDepth, maxDistance, cameraPos, normCoord));
+    return Paint<S>(BeamCaster<S, FloatDivider>::Subdivide(U0, V0, 0.0, 0, 1.0, maxDepth, maxDistance, cameraPos, normCoord));
 }
 
 [shader("compute")]
