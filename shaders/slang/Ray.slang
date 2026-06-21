@@ -59,6 +59,50 @@ public struct RayMarcher<T : IScene<float, float3>> : IIntersector {
     }
 }
 
+public struct IntervalRayCasterStackNewton<S : IScene<Interval, Interval3>> : IIntersector {
+    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
+        Optional<float> result = none;
+
+        Interval t0;
+        Interval f;
+
+        Stack<Interval, 64> stack;
+        stack.push(Interval(0, maxDistance));
+
+        while (false == stack.isEmpty() && false == stack.isFull()) {
+            t0 = stack.pop();
+            f = S::evaluate(ro + rd * t0);
+
+            if (f.contains(0.0)) {
+                Interval dF = dot(gradient<S>(ro + rd * t0), rd);
+
+                if (!dF.contains(0.0)) {
+                    float mid = t0.mid();
+
+                    Interval fMid = S::evaluate(ro + rd * Interval(mid));
+                    Interval t1 = mid - (fMid / dF);
+
+                    if (t1.intersects(t0)) {
+                        stack.push(t1.intersection(t0));
+                    }
+                }
+                else {
+                    if (t0.length() < epsilon) {
+                        return t0.minVal;
+                    }
+
+                    float mid = t0.mid();
+
+                    stack.push(Interval(mid, t0.maxVal));
+                    stack.push(Interval(t0.minVal, mid));
+                }
+            }
+        }
+
+        return result;
+    }
+}
+
 public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider, M : Mode> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;

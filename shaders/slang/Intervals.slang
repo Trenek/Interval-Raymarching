@@ -40,7 +40,7 @@ public struct Interval : IDifferentiable {
     }
 
     public bool intersects(Interval a) {
-        return this.i.x <= a.i.y && a.i.x <= this.i.y;
+        return max(this.i.x, a.i.x) <= min(this.i.y, a.i.y);
     }
 
     public Interval intersection(Interval a) {
@@ -68,7 +68,7 @@ public struct Interval : IDifferentiable {
     }
 
     public bool lessThanOrEquals(Interval a) {
-        return this.i.y <= a.i.y;
+        return all(this.i <= a.i);
     }
 
     static DifferentialPair<Interval> fwdAdd(DifferentialPair<Interval> dpa, DifferentialPair<Interval> dpb) {

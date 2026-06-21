@@ -153,4 +153,6 @@ void test(struct EngineCore *engine, enum state *state) {
 
         printf("\r%f ms   median %f ms       ", res / num, times[maxTime / 2]);
     }
+
+    vkDestroyQueryPool(engine->graphics.device, queryPool, NULL);
 }
