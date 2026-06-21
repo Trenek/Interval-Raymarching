@@ -247,7 +247,7 @@ struct BarthDecic : IScene<T, T3> {
 
         float tau = (1 + sqrt(5)) / 2;
         float tau4 = pow(tau, 4);
-        float w = 1.0;
+        float w = 2;
         float w2 = w * w;
 
         T x2 = pow(x, 2);
@@ -258,18 +258,18 @@ struct BarthDecic : IScene<T, T3> {
         T y4 = pow(y, 4);
         T z4 = pow(z, 4);
 
-        T p1 = (x2 - tau4 * y2) * (y2 - tau4 * z2) * (z2 - tau4 * x2);
-        T p2 = x4 + y4 + z4 - 2.0 * x2 * y2 - 2.0 * x2 * z2 - 2.0 * y2 * z2;
-        T term1 = 8.0 * p1 * p2;
+        T p1 = (x2 - tau4 * y2);
+        T p2 = (y2 - tau4 * z2);
+        T p3 = (z2 - tau4 * x2);
+        T p4 = x4 + y4 + z4 - 2 * x2 * y2 - 2 * x2 * z2 - 2 * y2 * z2;
+        T term1 = 8 * p1 * p2 * p3 * p4;
 
-        T sumSq = x2 + y2 + z2;
-        T b1 = sumSq - w2;
-        T b2 = sumSq - (2.0 - tau) * w2;
-        T term2 = (3.0 + 5.0 * tau) * (b1 * b1) * (b2 * b2) * w2;
+        float q0 = 3 + 5 * tau;
+        T q1 = pow(x2 + y2 + z2 - w2, 2);
+        T q2 = pow(x2 + y2 + z2 - (2 - tau) * w2, 2);
+        T term2 = q0 * q1 * q2 * w2;
 
-        T rawBarthDecic = term1 + term2;
-
-        return rawBarthDecic;
+        return term1 + term2;
     }
 };
 
@@ -291,7 +291,7 @@ struct Chmutov : IScene<T, T3> {
 struct Mitchell : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
-        float3x3 rot2 = rot3D(float3(1.0, 3.0, 1.6), 7.0);
+        float3x3 rot2 = rot3D(float3(1.0, 3.0, 1.6), ubo.iTime);
 
         p = mul(rot2, p);
 
@@ -306,5 +306,48 @@ struct Mitchell : IScene<T, T3> {
         T x4 = pow(x, 4);
 
         return 4 * (x4 + pow(y2 + z2, 2)) + 17 * x2 * (y2 + z2) - 20 * (x2 + y2 + z2) + 17;
+    }
+}
+
+struct Bretzel4 : IScene<T, T3> {
+    [Differentiable]
+    static T evaluate(T3 p) {
+        float3x3 rot2 = rot3D(float3(1.0, 3.0, 1.6), ubo.iTime);
+
+        p = mul(rot2, p);
+
+        T x = p.x;
+        T y = p.y;
+        T z = p.z;
+
+        T x2 = pow(x, 2);
+        T y2 = pow(y, 2);
+        T z2 = pow(z, 2);
+
+        return 0.1 * pow(x2 * pow(1.21 - x2, 2) * pow(3.8 - x2, 3) - 10 * y2, 2) + 60 * z2 - 2;
+    }
+}
+
+struct KleinBottle : IScene<T, T3> {
+    [Differentiable]
+    static T evaluate(T3 p) {
+        float3x3 rot2 = rot3D(float3(1.0, 3.0, 1.6), ubo.iTime);
+
+        p = mul(rot2, p);
+
+        T x = p.x;
+        T y = p.y;
+        T z = p.z;
+
+        T x2 = pow(x, 2);
+        T y2 = pow(y, 2);
+        T z2 = pow(z, 2);
+
+        T q0 = x2 + y2 + z2 - 2 * y - 1;
+        T p0 = x2 + y2 + z2 + 2 * y - 1;
+        T p1 = (pow(q0, 2) - 8 * z2);
+        T p2 = 16 * x * z * q0;
+    
+        return p0 * p1 + p2;
     }
 }
