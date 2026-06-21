@@ -56,69 +56,124 @@ public struct RayMarcher<T : IScene<float, float3>> : IIntersector {
     }
 }
 
-public struct IntervalRayCasterStack<S : IScene<Interval, Interval3>> : IIntersector {
-    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
-        Optional<float> result = none;
+public interface IDivider {
+    public __init(float epsilon, float maxDistance);
 
-        Interval t = Interval(0.0, maxDistance);
-        Interval f;
+    bool lastingCondition();
+    bool acceptanceCondition();
+    [[mutating]] Interval getNext();
+    [[mutating]] void goDown();
+    [[mutating]] void goUp();
+}
 
-        Stack<Interval, 64> stack;
-        stack.push(t);
+public struct StackDivider : IDivider {
+    Stack<Interval, 64> stack;
+    Interval curr;
+    float epsilon;
 
-        while (false == stack.isEmpty() && false == stack.isFull()) {
-            t = stack.pop();
-            f = S::evaluate(ro + rd * t);
+    public __init(float epsilon, float maxDistance) {
+        this.curr = Interval(0);
+        this.epsilon = epsilon;
+        stack.push(Interval(0, maxDistance));
+    }
 
-            if (f.contains(0.0)) {
-                if (t.length() < epsilon) {
-                    return t.maxVal;
-                }
-                float mid = t.mid();
+    [[mutating]]
+    Interval getNext() {
+        return curr = stack.pop();
+    }
 
-                stack.push(Interval(mid, t.maxVal));
-                stack.push(Interval(t.minVal, mid));
-            }
-        }
+    bool lastingCondition() {
+        return false == stack.isEmpty() && false == stack.isFull();
+    }
 
-        if (f.contains(0.0)) {
-            result = t.minVal;
-        }
+    [[mutating]]
+    void goDown() {
+        Interval t = this.curr;
+        float mid = t.mid();
 
-        return result;
+        stack.push(Interval(mid, t.maxVal));
+        stack.push(Interval(t.minVal, mid));
+    }
+
+    [[mutating]]
+    void goUp() {}
+
+    bool acceptanceCondition() {
+        return this.curr.length() < this.epsilon;
     }
 }
 
-public struct IntervalRayCasterInt<T : IScene<Interval, Interval3>> : IIntersector {
+public struct IntDivider : IDivider {
+    uint32_t eps;
+    uint32_t h = 1;
+    uint32_t l = 1;
+
+    float epsilon;
+    float maxDistance;
+
+    public __init(float epsilon, float maxDistance) {
+        this.epsilon = epsilon;
+        this.maxDistance = maxDistance;
+
+        this.eps = uint32_t(floor(log2(maxDistance / epsilon)));
+    }
+
+    Interval getNext() {
+        return Interval(float2(
+            (this.h - 1) * this.maxDistance / this.l, 
+            this.h * this.maxDistance / this.l
+        ));
+    }
+
+    bool lastingCondition() {
+        return this.h <= this.l;
+    }
+
+    [[mutating]]
+    void goDown() {
+        this.h <<= 1;
+        this.l <<= 1;
+
+        this.h -= 1;
+    }
+
+    [[mutating]]
+    void goUp() {
+        uint shift = firstbitlow(h & (-h));
+
+        this.h >>= shift;
+        this.l >>= shift;
+
+        this.h += 1;
+    }
+
+    bool acceptanceCondition() {
+        return firstbithigh(this.l) >= this.eps;
+    }
+}
+
+public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
-        Interval t0;
+        Interval t;
         Interval f;
 
-        uint32_t eps = uint32_t(floor(log2(maxDistance / epsilon)));
-        uint32_t h = 1;
-        uint32_t l = 1;
+        D d = D(epsilon, maxDistance);
 
-        while (h <= l) {
-            t0 = Interval(float2((h - 1) * maxDistance / l, h * maxDistance / l));
-            f = T::evaluate(ro + rd * t0);
+        while (d.lastingCondition()) {
+            t = d.getNext();
+            f = S::evaluate(ro + rd * t);
 
             if (f.contains(0.0)) {
-                if (firstbithigh(l) >= eps) {
-                    return t0.minVal;
+                if (d.acceptanceCondition()) {
+                    return t.minVal;
                 }
 
-                h = 1 + 2 * (h - 1);
-                l *= 2;
+                d.goDown();
             }
             else {
-                uint shift = firstbitlow(h & (-h));
-
-                l >>= shift;
-                h >>= shift;
-
-                h += 1;
+                d.goUp();
             }
         }
 

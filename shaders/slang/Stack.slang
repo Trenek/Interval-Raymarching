@@ -1,5 +1,5 @@
 public struct Stack <T, let N : int> {
-    T stack[N];
+    public T stack[N];
     public int currentSize;
 
     public __init() {
@@ -10,6 +10,10 @@ public struct Stack <T, let N : int> {
     public T pop() {
         this.currentSize -= 1;
         return this.stack[this.currentSize];
+    }
+
+    public T top() {
+        return this.stack[this.currentSize - 1];
     }
 
     public bool isEmpty() {
