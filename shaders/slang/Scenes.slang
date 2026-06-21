@@ -238,9 +238,9 @@ struct BarthSextic : IScene<T, T3> {
 struct BarthDecic : IScene<T, T3> {
     [Differentiable]
     static T evaluate(T3 p) {
-        float3x3 rot2 = rot3D(float3(1.0, 2.0, 1.5), ubo.iTime);
-
-        p = mul(rot2, p);
+        // float3x3 rot2 = rot3D(float3(1.0, 2.0, 1.5), ubo.iTime);
+        //
+        // p = mul(rot2, p);
         T x = p.x;
         T y = p.y;
         T z = p.z;

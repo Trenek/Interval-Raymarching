@@ -3,6 +3,7 @@ import Intervals3;
 import IScene;
 import Ray;
 import Divider;
+import Modes;
 
 struct UniformBufferObject {
     float2 iResolution;
@@ -65,7 +66,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
     float3 hitPoint = ro + rd * distance;
     float3 shadowOrigin = hitPoint + lightDirection;
     
-    Optional<float> shadowDistance = IntervalRayCaster<T, IntDivider>::checkIntersection(shadowOrigin, lightDirection, epsilon, maxDistance);
+    Optional<float> shadowDistance = IntervalRayCaster<T, IntDivider, NormalMode>::checkIntersection(shadowOrigin, lightDirection, epsilon, maxDistance);
     
     float shadowFactor = 1.0;
     
@@ -79,7 +80,7 @@ float3 getColor2<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float di
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = IntervalRayCaster<T, FloatDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCaster<T, FloatDivider, NormalMode>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -87,18 +88,18 @@ bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lig
 }
 
 [shader("compute")]
-[numthreads(32, 1, 1)] 
+[numthreads(16, 16, 1)] 
 void computeMain(uint3 threadID : SV_DispatchThreadID) {
     const float2 fragCoord = float2(threadID.xy);
     const float2 uv = (fragCoord - 0.5 * ubo.iResolution.xy) / ubo.iResolution.y;
     const float3 lightDir = normalize(float3(1, 1.0, -0.5));
 
-    const float3 ro = float3(0.0, 0.0, -10.0);
+    const float3 ro = float3(0.0, 0.0, -3.0);
     const float3 rd = normalize(float3(uv, 1.0));
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::Sphere>(ro, rd, lightDir, color, exp2(-12.0), 100)) {
+    if (tryToDraw<I::Sphere>(ro, rd, lightDir, color, exp2(-12.0), 10)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 

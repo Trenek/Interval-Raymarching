@@ -31,6 +31,7 @@ macro(compile_shader2 SRC_FILE DST_FILE)
                 "${SHADER_SRC_2}/Ray.slang"
                 "${SHADER_SRC_2}/Scenes.slang"
                 "${SHADER_SRC_2}/Stack.slang"
+                "${SHADER_SRC_2}/Modes.slang"
     )
 
     list(APPEND ALL_SPV_OUTPUTS "${SHADER_DST}/${DST_FILE}")

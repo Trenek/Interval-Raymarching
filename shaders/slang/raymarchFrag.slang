@@ -5,6 +5,7 @@ import Ray;
 import Affine;
 import Affine3;
 import Divider;
+import Modes;
 
 struct UniformBufferObject {
     float2 iResolution;
@@ -67,7 +68,7 @@ bool tryToDraw<T : IScene<float, float3>>(float3 ro, float3 rd, float3 lightDir,
 bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = IntervalRayCasterNewton<T, FloatDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = IntervalRayCaster<T, IntDivider, NewtonMode>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -77,7 +78,7 @@ bool tryToDraw<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, float3 lig
 bool tryToDraw<T : IScene<Affine, Affine3>>(float3 ro, float3 rd, float3 lightDir, in out float3 color, const float epsilon, const float maxDistance) {
     Optional<float> distance = none;
 
-    if (none != (distance = AffineRayCaster<T, IntDivider>::checkIntersection(ro, rd, epsilon, maxDistance))) {
+    if (none != (distance = AffineRayCaster<T, IntDivider, NormalMode>::checkIntersection(ro, rd, epsilon, maxDistance))) {
         color = getColor<T>(ro, rd, distance.value, lightDir, epsilon, maxDistance);
     }
 
@@ -99,7 +100,7 @@ float4 fragMain(FragmentInput input) : SV_Target {
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::Mitchell>(ro, rd, lightDir, color, exp2(-12.0), 10)) {
+    if (tryToDraw<I::Mitchell>(ro, rd, lightDir, color, exp2(-24.0), 10)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 

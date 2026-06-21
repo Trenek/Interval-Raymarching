@@ -8,6 +8,7 @@ import Affine3;
 import IScene;
 
 import Divider;
+import Modes;
 
 public interface IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance);
@@ -58,97 +59,7 @@ public struct RayMarcher<T : IScene<float, float3>> : IIntersector {
     }
 }
 
-public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider> : IIntersector {
-    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
-        Optional<float> result = none;
-
-        Interval t;
-        Interval f;
-
-        D d = D(epsilon, maxDistance);
-
-        while (d.lastingCondition()) {
-            t = d.getNext();
-            f = S::evaluate(ro + rd * t);
-
-            if (f.contains(0.0)) {
-                if (d.acceptanceCondition()) {
-                    return t.minVal;
-                }
-
-                d.goDown();
-            }
-            else {
-                d.goUp();
-            }
-        }
-
-        return result;
-    }
-}
-
-public struct AffineRayCaster<S : IScene<Affine, Affine3>, D : IDivider> : IIntersector {
-    public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
-        Optional<float> result = none;
-
-        Interval t;
-        Affine f;
-
-        D d = D(epsilon, maxDistance);
-
-        while (d.lastingCondition()) {
-            t = d.getNext();
-            f = S::evaluate(ro + rd * Affine(t));
-
-            if (f.contains(0.0)) {
-                if (d.acceptanceCondition()) {
-                    return t.minVal;
-                }
-
-                d.goDown();
-            }
-            else {
-                d.goUp();
-            }
-        }
-
-        return result;
-    }
-}
-
-Optional<float> Newton<T : IScene<Interval, Interval3>>(float3 ro, float3 rd, Interval t0, Interval f, Interval dF, float epsilon) {
-    while (t0.length() > epsilon) {
-        float mid = t0.mid();
-
-        Interval fMid = T::evaluate(ro + rd * Interval(mid));
-        Interval t1 = mid - (fMid / dF);
-
-        if (t0.contains(t1)) {
-            t0 = t1;
-        }
-        else if (t1.intersects(t0)) {
-            t0 = t1.intersection(t0);
-        }
-        else {
-            return none;
-        }
-
-        f = T::evaluate(ro + rd * t0);
-        dF = dot(gradient<T>(ro + rd * t0), rd);
-
-        if (dF.contains(0.0)) {
-            return none; 
-        }
-    }
-
-    if (f.contains(0.0)) {
-        return Optional<float>(t0.minVal);
-    }
-
-    return none;
-}
-
-public struct IntervalRayCasterNewton<S : IScene<Interval, Interval3>, D : IDivider> : IIntersector {
+public struct IntervalRayCaster<S : IScene<Interval, Interval3>, D : IDivider, M : Mode> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
@@ -162,14 +73,10 @@ public struct IntervalRayCasterNewton<S : IScene<Interval, Interval3>, D : IDivi
             f = S::evaluate(ro + rd * t0);
 
             if (f.contains(0.0)) {
-                Interval dF = dot(gradient<S>(ro + rd * t0), rd);
+                Optional<float> n = M::mode<S>(ro, rd, t0, f, epsilon);
 
-                if (!dF.contains(0.0)) {
-                    Optional<float> n = Newton<S>(ro, rd, t0, f, dF, epsilon);
-
-                    if (n != none) {
-                        return n;
-                    }
+                if (n != none) {
+                    return n;
                 }
                 
                 if (d.acceptanceCondition()) {
@@ -187,39 +94,7 @@ public struct IntervalRayCasterNewton<S : IScene<Interval, Interval3>, D : IDivi
     }
 }
 
-Optional<float> Newton<T : IScene<Affine, Affine3>>(float3 ro, float3 rd, Interval t0, Affine f, Affine dF, float epsilon) {
-    while (t0.length() > epsilon) {
-        float mid = t0.mid();
-
-        Affine fMid = T::evaluate(ro + rd * Affine(mid));
-        Interval t1 = mid - (fMid / dF).toInterval();
-
-        if (t0.contains(t1)) {
-            t0 = t1;
-        }
-        else if (t1.intersects(t0)) {
-            t0 = t1.intersection(t0);
-        }
-        else {
-            return none;
-        }
-
-        f = T::evaluate(ro + rd * Affine(t0));
-        dF = dot(gradient<T>(ro + rd * Affine(t0)), rd);
-
-        if (dF.contains(0.0)) {
-            return none; 
-        }
-    }
-
-    if (f.contains(0.0)) {
-        return Optional<float>(t0.minVal);
-    }
-
-    return none;
-}
-
-public struct AffineRayCasterNewton<S : IScene<Affine, Affine3>, D : IDivider> : IIntersector {
+public struct AffineRayCaster<S : IScene<Affine, Affine3>, D : IDivider, M : Mode> : IIntersector {
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
@@ -233,14 +108,10 @@ public struct AffineRayCasterNewton<S : IScene<Affine, Affine3>, D : IDivider> :
             f = S::evaluate(ro + rd * Affine(t0));
 
             if (f.contains(0.0)) {
-                Affine dF = dot(gradient<S>(ro + rd * Affine(t0)), rd);
+                Optional<float> n = M::mode<S>(ro, rd, t0, f, epsilon);
 
-                if (!dF.contains(0.0)) {
-                    Optional<float> n = Newton<S>(ro, rd, t0, f, dF, epsilon);
-
-                    if (n != none) {
-                        return n;
-                    }
+                if (n != none) {
+                    return n;
                 }
                 
                 if (d.acceptanceCondition()) {
