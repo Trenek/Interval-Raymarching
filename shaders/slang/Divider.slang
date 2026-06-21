@@ -49,7 +49,6 @@ public struct StackDivider : IDivider {
         stack.push(Interval(t.minVal, mid));
     }
 
-    [[mutating]]
     void goUp() {}
 
     bool acceptanceCondition() {
@@ -124,32 +123,30 @@ public struct FloatDivider : IDivider {
     float tincr;
 
     float start;
+    float maxDistance;
 
     public __init(float epsilon, float maxDistance) {
         this.dlast = int(round(log2(maxDistance / epsilon)));
         this.d = 0;
         this.start = 0;
+        this.maxDistance = maxDistance;
 
-        this.t = float2(0.0f, maxDistance);
-        this.tincr = maxDistance * 0.5f;
+        this.t = float2(0.0f, 1.0f);
+        this.tincr = 0.5f;
     }
 
     public __init(float epsilon, Interval initInterval) {
-        float length = initInterval.length();
-
-        this.dlast = int(round(log2(length / epsilon)));
+        this.maxDistance = initInterval.length();
+        this.dlast = int(round(log2(maxDistance / epsilon)));
         this.d = 0;
         this.start = initInterval.minVal;
 
-        this.t = float2(0.0f, length);
-        this.tincr = length * 0.5f;
+        this.t = float2(0.0f, 1.0f);
+        this.tincr = 0.5f;
     }
 
-    [[mutating]]
     Interval getNext() {
-        this.t.y = this.t.x + tincr;
-
-        return Interval(this.start + t);
+        return Interval(this.start + this.t * this.maxDistance);
     }
 
     bool lastingCondition() {
@@ -160,6 +157,7 @@ public struct FloatDivider : IDivider {
     void goDown() {
         this.d += 1;
         this.tincr *= 0.5f;
+        this.t.y = this.t.x + tincr;
     }
 
     [[mutating]]
@@ -176,6 +174,7 @@ public struct FloatDivider : IDivider {
                 if (d == -1 || fp > 1e-8) break;
             }
         }
+        this.t.y = this.t.x + tincr;
     }
 
     bool acceptanceCondition() {
