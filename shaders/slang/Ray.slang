@@ -74,25 +74,71 @@ public struct IntervalRayCasterStackNewton<S : IScene<Interval, Interval3>> : II
             f = S::evaluate(ro + rd * t0);
 
             if (f.contains(0.0)) {
+                if (t0.length() < epsilon) {
+                    return t0.minVal;
+                }
+
                 Interval dF = dot(gradient<S>(ro + rd * t0), rd);
 
-                if (!dF.contains(0.0)) {
-                    float mid = t0.mid();
+                float mid = t0.mid();
+                Interval fMid = S::evaluate(ro + rd * Interval(mid));
 
-                    Interval fMid = S::evaluate(ro + rd * Interval(mid));
+                if (!dF.contains(0.0)) {
                     Interval t1 = mid - (fMid / dF);
 
                     if (t1.intersects(t0)) {
-                        stack.push(t1.intersection(t0));
+                        Interval res = t1.intersection(t0);
+
+                        if (res.length() < t0.length()) {
+                            stack.push(res);
+                        }
+                        else {
+                            stack.push(Interval(mid, t0.maxVal));
+                            stack.push(Interval(t0.minVal, mid));
+                        }
+                    }
+                }
+                else if (!fMid.contains(0.0)) {
+                    if (0.0 < fMid.i.x) {
+                        Interval t1 = mid - Interval(-1e30, fMid.i.x / dF.i.x);
+                        Interval t2 = mid - Interval(fMid.i.x / dF.i.y, 1e30);
+
+                        if (t1.intersects(t0)) {
+                            Interval res = t1.intersection(t0);
+
+                            if (res.length() < t0.length()) {
+                                stack.push(res);
+                            }
+                            else {
+                                stack.push(Interval(mid, t0.maxVal));
+                                stack.push(Interval(t0.minVal, mid));
+                            }
+                        }
+                        if (t2.intersects(t0)) {
+                            Interval res = t2.intersection(t0);
+
+                            if (res.length() < t0.length()) {
+                                stack.push(res);
+                            }
+                            else {
+                                stack.push(Interval(mid, t0.maxVal));
+                                stack.push(Interval(t0.minVal, mid));
+                            }
+                        }
+                    }
+                    else {
+                        Interval t1 = mid - Interval(-1e30, fMid.i.x / dF.i.y);
+                        Interval t2 = mid - Interval(fMid.i.x / dF.i.x, 1e30);
+
+                        if (t1.intersects(t0)) {
+                            stack.push(t1.intersection(t0));
+                        }
+                        if (t2.intersects(t0)) {
+                            stack.push(t2.intersection(t0));
+                        }
                     }
                 }
                 else {
-                    if (t0.length() < epsilon) {
-                        return t0.minVal;
-                    }
-
-                    float mid = t0.mid();
-
                     stack.push(Interval(mid, t0.maxVal));
                     stack.push(Interval(t0.minVal, mid));
                 }

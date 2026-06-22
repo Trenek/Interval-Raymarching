@@ -101,7 +101,7 @@ float4 fragMain(FragmentInput input) : SV_Target {
 
     float3 color = float3(0.1, 0.1, 0.1);
 
-    if (tryToDraw<I::Mitchell>(ro, rd, lightDir, color, exp2(-24.0), 10)) {
+    if (tryToDraw<I::Mitchell>(ro, rd, lightDir, color, exp2(-10.0), 10)) {
         color *= float3(0x21.0 / 0xFF, 0x37.0 / 0xFF, 0x00.0 / 0xFF);
     }
 
