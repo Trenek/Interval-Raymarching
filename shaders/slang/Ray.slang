@@ -60,13 +60,27 @@ public struct RayMarcher<T : IScene<float, float3>> : IIntersector {
 }
 
 public struct IntervalRayCasterStackNewton<S : IScene<Interval, Interval3>> : IIntersector {
+    public static void pushAndCheck(in out Stack<Interval, 256> stack, Interval t0, Interval t1, float mid) {
+        if (t1.intersects(t0)) {
+            Interval res = t1.intersection(t0);
+
+            if (res.length() < t0.length() * 0.99) {
+                stack.push(res);
+            }
+            else {
+                stack.push(Interval(mid, t0.maxVal));
+                stack.push(Interval(t0.minVal, mid));
+            }
+        }
+    }
+
     public static Optional<float> checkIntersection(float3 ro, float3 rd, const float epsilon, const float maxDistance) {
         Optional<float> result = none;
 
         Interval t0;
         Interval f;
 
-        Stack<Interval, 64> stack;
+        Stack<Interval, 256> stack;
         stack.push(Interval(0, maxDistance));
 
         while (false == stack.isEmpty() && false == stack.isFull()) {
@@ -86,56 +100,22 @@ public struct IntervalRayCasterStackNewton<S : IScene<Interval, Interval3>> : II
                 if (!dF.contains(0.0)) {
                     Interval t1 = mid - (fMid / dF);
 
-                    if (t1.intersects(t0)) {
-                        Interval res = t1.intersection(t0);
-
-                        if (res.length() < t0.length()) {
-                            stack.push(res);
-                        }
-                        else {
-                            stack.push(Interval(mid, t0.maxVal));
-                            stack.push(Interval(t0.minVal, mid));
-                        }
-                    }
+                    pushAndCheck(stack, t0, t1, mid);
                 }
                 else if (!fMid.contains(0.0)) {
                     if (0.0 < fMid.i.x) {
                         Interval t1 = mid - Interval(-1e30, fMid.i.x / dF.i.x);
                         Interval t2 = mid - Interval(fMid.i.x / dF.i.y, 1e30);
 
-                        if (t1.intersects(t0)) {
-                            Interval res = t1.intersection(t0);
-
-                            if (res.length() < t0.length()) {
-                                stack.push(res);
-                            }
-                            else {
-                                stack.push(Interval(mid, t0.maxVal));
-                                stack.push(Interval(t0.minVal, mid));
-                            }
-                        }
-                        if (t2.intersects(t0)) {
-                            Interval res = t2.intersection(t0);
-
-                            if (res.length() < t0.length()) {
-                                stack.push(res);
-                            }
-                            else {
-                                stack.push(Interval(mid, t0.maxVal));
-                                stack.push(Interval(t0.minVal, mid));
-                            }
-                        }
+                        pushAndCheck(stack, t0, t1, mid);
+                        pushAndCheck(stack, t0, t2, mid);
                     }
                     else {
                         Interval t1 = mid - Interval(-1e30, fMid.i.x / dF.i.y);
                         Interval t2 = mid - Interval(fMid.i.x / dF.i.x, 1e30);
 
-                        if (t1.intersects(t0)) {
-                            stack.push(t1.intersection(t0));
-                        }
-                        if (t2.intersects(t0)) {
-                            stack.push(t2.intersection(t0));
-                        }
+                        pushAndCheck(stack, t0, t1, mid);
+                        pushAndCheck(stack, t0, t2, mid);
                     }
                 }
                 else {

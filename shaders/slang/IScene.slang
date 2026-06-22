@@ -18,7 +18,7 @@ public float3 gradient<T : IScene<float, float3>>(float3 p) {
     );
 }
 
-#define FORWARD_DIFF
+// #define FORWARD_DIFF
 
 #ifdef FORWARD_DIFF
 public Interval3 gradient<T : IScene<Interval, Interval3>>(Interval3 p) {
